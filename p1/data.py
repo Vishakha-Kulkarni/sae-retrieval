@@ -54,8 +54,10 @@ def load_stats(path):
         stats = json.load(source)
     n = stats['num_docs']
     avg = stats['avg_doc_length']
+    if stats.get('length_definition') != 'concept_count':
+        raise ValueError('Regenerate statistics with p1.prepare: length_definition must be concept_count')
     if not isinstance(n, int) or n <= 0 or not math.isfinite(avg) or avg <= 0:
-        raise ValueError('Corpus size and mean sum of activations must be positive')
+        raise ValueError('Corpus size and mean concept count must be positive')
     stats['document_frequency'] = {int(k): v for k, v in stats['document_frequency'].items()}
     if any(k < 0 or not isinstance(v, int) or not 0 <= v <= n
            for k, v in stats['document_frequency'].items()):
@@ -67,18 +69,25 @@ def idf(concept, stats):
     df = stats['document_frequency'].get(concept)
     if df is None:
         raise ValueError(f'Corpus statistics missing concept {concept}')
-    return math.log1p((stats['num_docs'] - df + 0.5) / (df + 0.5))
+    return math.log((stats['num_docs'] - df + 0.5) / (df + 0.5))
 
 
 def features(query, document, stats):
     """Each row belongs to one shared concept; empty intersections score zero."""
-    length = sum(document.values()) / stats['avg_doc_length']
+    length = len(document) / stats['avg_doc_length']
     return [[math.log1p(query[c]), math.log1p(document[c]), idf(c, stats),
              math.log1p(length)] for c in sorted(query.keys() & document.keys())]
 
 
-def bm25(query, document, stats, k1=1.2, b=0.75):
-    length = sum(document.values()) / stats['avg_doc_length']
-    return sum(query[c] * idf(c, stats) * document[c] * (k1 + 1) /
-               (document[c] + k1 * (1 - b + b * length))
+def bm25(query, document, stats, k1=0.6, b=2.0, k2=1.5):
+    length = len(document) / stats['avg_doc_length']
+    return sum((query[c] * (k2 + 1) / (query[c] + k2)) * idf(c, stats) * document[c] * (k1 + 1) /
+               denominator(document[c], length, k1, b)
                for c in query.keys() & document.keys())
+
+
+def denominator(activation, relative_length, k1, b):
+    value = activation + k1 * (1 - b + b * relative_length)
+    if value == 0:
+        raise ValueError('Released BM25 denominator is zero; this parameter setting is undefined')
+    return value
