@@ -1,0 +1,3 @@
+[submodule "upstream/Decoding-Dense-Embeddings"]
+	path = upstream/Decoding-Dense-Embeddings
+	url = https://github.com/Tro-fish/Decoding-Dense-Embeddings.git

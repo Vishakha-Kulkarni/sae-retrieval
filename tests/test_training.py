@@ -25,7 +25,8 @@ class TrainingTest(unittest.TestCase):
                     {'docid': 'b', 'concepts': {'2': 1}, 'teacher_score': 0.}]}
                 (root / f'{split}.jsonl').write_text(json.dumps(group) + '\n')
             (root / 'stats.json').write_text(json.dumps({
-                'num_docs': 2, 'avg_doc_length': 1.5, 'document_frequency': {'1': 1, '2': 1}}))
+                'num_docs': 3, 'avg_doc_length': 1., 'length_definition': 'concept_count',
+                'document_frequency': {'1': 1, '2': 1}}))
             (root / 'qrels').write_text('validation 0 a 1\n')
             def run(*args):
                 return subprocess.run([sys.executable, '-m', *args], check=True,

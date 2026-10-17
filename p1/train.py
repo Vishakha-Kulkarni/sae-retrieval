@@ -69,11 +69,16 @@ def main():
         print(json.dumps({'epoch': epoch + 1, 'loss': total / len(train), **metrics}))
         if metrics['mrr_at_10'] > best:
             best = metrics['mrr_at_10']
-            torch.save({'state_dict': model.state_dict(), 'hidden': args.hidden,
+            torch.save({'format_version': 2, 'state_dict': model.state_dict(), 'hidden': args.hidden,
                         'stats': stats, 'args': vars(args), 'validation_metrics': metrics,
-                        'input_sha256': {name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                        'input_sha256': {name: file_hash(path)
                                          for name, path in [('train', args.train), ('validation', args.validation),
                                                             ('qrels', args.qrels), ('stats', args.stats)]}}, args.output)
+
+
+def file_hash(path):
+    with open(path, 'rb') as source:
+        return hashlib.file_digest(source, 'sha256').hexdigest()
 
 
 if __name__ == '__main__':
