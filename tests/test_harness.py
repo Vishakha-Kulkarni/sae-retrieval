@@ -5,6 +5,7 @@ import unittest
 
 from p1.metrics import evaluate, per_query, randomization_test
 from p5.harness import compare, read_qids, read_run
+from p5.mismatch import mismatch_subsets, write_subsets
 
 
 class MetricTests(unittest.TestCase):
@@ -108,6 +109,41 @@ class RunFileTests(unittest.TestCase):
     def test_read_qids_rejects_duplicates(self):
         with self.assertRaises(ValueError):
             read_qids(self.write('dup.qids', 'q1\nq1\n'))
+
+
+class MismatchTests(unittest.TestCase):
+    def setUp(self):
+        self.qrels = {'rank50': {'g': 1}, 'two_rel': {'g1': 1, 'g2': 1}, 'no_hits': {'g': 1},
+                      'deep': {'g': 1}, 'unlabeled': {'g': 0}}
+        filler = [f'x{i}' for i in range(1000)]
+        self.run = {'rank50': filler[:49] + ['g'] + filler[49:999],
+                    'two_rel': filler[:4] + ['g1'] + filler[4:500] + ['g2'],
+                    'deep': filler[:999] + ['g']}
+
+    def test_failures_per_cutoff(self):
+        subsets, unlabeled = mismatch_subsets(self.run, self.qrels, (10, 100, 1000))
+        self.assertEqual(subsets[10], ['deep', 'no_hits', 'rank50'])
+        self.assertEqual(subsets[100], ['deep', 'no_hits'])
+        self.assertEqual(subsets[1000], ['no_hits'])
+        self.assertEqual(unlabeled, ['unlabeled'])
+
+    def test_subsets_nest(self):
+        subsets, _ = mismatch_subsets(self.run, self.qrels, (1000, 10, 100))
+        self.assertLessEqual(set(subsets[1000]), set(subsets[100]))
+        self.assertLessEqual(set(subsets[100]), set(subsets[10]))
+
+    def test_write_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'qrels').write_text(''.join(f'{q} 0 {d} {r}\n' for q, j in self.qrels.items()
+                                                for d, r in j.items()))
+            (root / 'bm25.run').write_text(''.join(f'{q} Q0 {d} {i} {-i} bm25\n' for q, docs in self.run.items()
+                                                   for i, d in enumerate(docs, 1)))
+            summary = write_subsets(root / 'bm25.run', root / 'qrels', root / 'out', (10, 1000), 'dev')
+            self.assertEqual(summary['counts'], {'10': 3, '1000': 1})
+            self.assertEqual(read_qids(root / 'out' / 'dev.mismatch_1000.qids'), ['no_hits'])
+            with self.assertRaises(FileExistsError):
+                write_subsets(root / 'bm25.run', root / 'qrels', root / 'out', (10,), 'dev')
 
 
 if __name__ == '__main__':
