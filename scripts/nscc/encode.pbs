@@ -1,0 +1,19 @@
+#!/bin/bash
+# Week-1 shared task (P2): SimLM embeddings + dense top-100 candidates for train and validation.
+# qsub -P personal-riddhima scripts/nscc/encode.pbs   (needs RAW/ downloads and RAW/split from p1.prepare split)
+#PBS -N p2_encode
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=12:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+mkdir -p "$DATA"
+python -m p2.encode passages --input "$RAW/collection.tsv" --output "$DATA/passages.npy" --batch-size 1024
+python -m p2.encode queries --input "$RAW/split/train.queries.tsv" --output "$DATA/train_queries.npy"
+python -m p2.encode queries --input "$RAW/split/validation.queries.tsv" --output "$DATA/val_queries.npy"
+python -m p2.encode queries --input "$RAW/queries.dev.tsv" --output "$DATA/dev_queries.npy"
+python -m p2.candidates --passages "$DATA/passages.npy" --queries "$DATA/train_queries.npy" \
+    --qrels "$RAW/split/train.qrels" --output-prefix "$DATA/train"
+python -m p2.candidates --passages "$DATA/passages.npy" --queries "$DATA/val_queries.npy" \
+    --qrels "$RAW/split/validation.qrels" --output-prefix "$DATA/val"

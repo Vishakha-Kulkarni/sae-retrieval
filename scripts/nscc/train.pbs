@@ -1,0 +1,14 @@
+#!/bin/bash
+# One P2 run. Fine-tunes the baseline SAE (B0) so every row differs from the baseline by one loss term.
+# qsub -v PROJECT_ID=xxxx,NAME=listwise_latent_w0.5,LOSS=listwise,SPACE=latent,WEIGHT=0.5 scripts/nscc/train.pbs
+#PBS -N p2_train
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=08:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+python -m p2.train --data-dir "$DATA" --val-qrels "$RAW/split/validation.qrels" \
+    --init "$BASELINE" --in-ram \
+    --output "$CKPT/${NAME}_s${SEED:-42}" --rank-loss "${LOSS:-listwise}" --rank-space "${SPACE:-recon}" \
+    --rank-weight "${WEIGHT:-0.5}" --steps "${STEPS:-20000}" --seed "${SEED:-42}" --device cuda
