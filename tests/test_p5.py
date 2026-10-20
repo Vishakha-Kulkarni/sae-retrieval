@@ -17,6 +17,7 @@ from p5.expand import expand_neighbours, expand_threshold, write_expanded, write
 from p5.harness import read_run
 from p5.model import load_expander
 from p5.pool import FEATURES, build_pool, decoder_directions, eligible, idf_vector, near_miss, neighbour_table
+from p5.table import build_table, render_latex, render_markdown
 from p5.train import train_from_files
 from p5.upstream import upstream_functions
 
@@ -201,6 +202,64 @@ class ExpandTests(unittest.TestCase):
         row = evaluate_row('N2', root / 'n.json', index_path, root / 'qrels')
         self.assertEqual(row['metrics']['all']['mrr_at_10'], 1.)
         self.assertGreater(row['avg_query_concepts'], 1.5)
+
+
+def row_json(name, mrr, p=None, qrels='aa', baseline='b0run', **extra):
+    row = {'row': name, 'input_sha256': {'qrels': qrels}, 'run_sha256': f'{name}run',
+           'metrics': {'all': {'mrr_at_10': mrr, 'recall_at_1000': .9, 'ndcg_at_10': .5},
+                       'mismatch_1000': {'mrr_at_10': mrr / 2}},
+           'avg_query_concepts': 30., 'index_size_bytes': 1.27e9, 'latency_ms': {'mean': 150.}, **extra}
+    if p is not None:
+        row['baseline_run_sha256'] = baseline
+        row['p_value'] = {'all': {'mrr_at_10': p, 'recall_at_1000': .5, 'ndcg_at_10': .5},
+                          'mismatch_1000': {'mrr_at_10': p}}
+    return row
+
+
+class TableTests(unittest.TestCase):
+    def rows(self):
+        return [row_json('T0.7', .36, p=.2), row_json('B0', .35, run_sha256='b0run'), row_json('L', .38, p=.01)]
+
+    def test_baseline_first_then_input_order_with_markers(self):
+        table = build_table(self.rows())
+        self.assertEqual([r['row'] for r in table], ['B0', 'T0.7', 'L'])
+        markdown = render_markdown(table)
+        lines = markdown.splitlines()
+        self.assertIn('**0.380**†', lines[4])
+        self.assertIn('0.360 |', lines[3])
+        self.assertNotIn('†', lines[3])
+        self.assertIn(r'\textbf{0.380}$^\dagger$', render_latex(table))
+
+    def test_missing_metric_is_a_dash(self):
+        table = build_table(self.rows())
+        self.assertIn('| - |', render_markdown(table))  # no DL19 files given
+        rows = self.rows()
+        del rows[2]['metrics']['mismatch_1000']
+        self.assertIn('| - |', render_markdown(build_table(rows)).splitlines()[4])
+
+    def test_rows_on_different_qrels(self):
+        rows = self.rows()
+        rows[0]['input_sha256']['qrels'] = 'zz'
+        with self.assertRaisesRegex(ValueError, 'qrels'):
+            build_table(rows)
+
+    def test_row_tested_against_another_baseline_run(self):
+        rows = self.rows()
+        rows[2]['baseline_run_sha256'] = 'old'
+        with self.assertRaisesRegex(ValueError, 'baseline'):
+            build_table(rows)
+        rows = self.rows()  # hashes missing on both sides must not count as a match
+        del rows[2]['baseline_run_sha256'], rows[1]['run_sha256']
+        with self.assertRaisesRegex(ValueError, 'baseline'):
+            build_table(rows)
+
+    def test_test_collection_columns(self):
+        dl19 = [row_json('B0', .0, qrels='dl', run_sha256='b0run', metrics={'all': {'ndcg_at_10': .6}}),
+                row_json('L', .0, qrels='dl', metrics={'all': {'ndcg_at_10': .65}}, baseline_run_sha256='b0run',
+                         p_value={'all': {'ndcg_at_10': .03}})]
+        markdown = render_markdown(build_table(self.rows(), dl19=dl19))
+        self.assertIn('**0.650**†', markdown.splitlines()[4])
+        self.assertIn('0.600', markdown.splitlines()[2])
 
 
 class BM25Tests(unittest.TestCase):

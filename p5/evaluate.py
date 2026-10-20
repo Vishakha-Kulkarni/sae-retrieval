@@ -76,9 +76,11 @@ def evaluate_row(name, queries_path, index_path, qrels_path, subsets=None, basel
            'latency_ms': {'mean': float(np.mean(latencies)), 'p50': float(np.percentile(latencies, 50)),
                           'p95': float(np.percentile(latencies, 95))},
            'index_size_bytes': Path(index_path).stat().st_size}
+    if run_output:
+        row['run'], row['run_sha256'] = str(run_output), file_hash(run_output)
     if baseline_run:
         baseline = read_run(baseline_run)
-        row['baseline_run'] = str(baseline_run)
+        row['baseline_run'], row['baseline_run_sha256'] = str(baseline_run), file_hash(baseline_run)
         row['p_value'] = {}
         for view, q in views.items():
             ours, theirs = per_query(ranking, q, gain), per_query(baseline, q, gain)
