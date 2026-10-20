@@ -21,7 +21,9 @@ step() {  # output, command...: run the command only if the output is missing
 # 1. Training-derived validation split: 5,000 labelled train queries, seed 42 (deterministic).
 step "$SPLIT" python -m p1.prepare split --queries "$RAW/queries.train.tsv" --qrels "$RAW/qrels.train.tsv" \
     --output-dir "$SPLIT" --size 5000 --seed 42
-[ "$(wc -l < "$SPLIT/validation.qids")" -eq 5000 ] || { echo "validation split is not 5,000 queries" >&2; exit 1; }
+cmp -s "$SPLIT/validation.qids" splits/validation.qids || {
+    echo "$SPLIT/validation.qids differs from the frozen splits/validation.qids; check the inputs against" \
+         "splits/SHA256SUMS" >&2; exit 1; }
 
 # 2. Validation: query embeddings and dense top-100 candidates with SimLM teacher scores.
 step "$DATA/passages.npy" python -m p2.encode passages --input "$RAW/collection.tsv" --output "$DATA/passages.npy" \
@@ -35,7 +37,12 @@ for name in val_queries.npy val_queries.ids val.cands.npy val.teacher.npy val.po
     ln -sfn "$name" "$DATA/${name/val/validation}"
 done
 
-# 3. Dev queries (final evaluation only; nobody tunes on them).
+# 3. Dev queries (final evaluation only; nobody tunes on them). queries.tar.gz has no dev.small file, so it
+# is queries.dev.tsv restricted to the 6,980 queries of qrels.dev.small.tsv.
+if [ ! -e "$RAW/queries.dev.small.tsv" ]; then
+    awk -F'\t' 'NR==FNR{keep[$1]=1; next} ($1 in keep)' "$RAW/qrels.dev.small.tsv" "$RAW/queries.dev.tsv" \
+        > "$RAW/queries.dev.small.tsv"
+fi
 step "$DATA/dev_queries.npy" python -m p2.encode queries --input "$RAW/queries.dev.small.tsv" \
     --output "$DATA/dev_queries.npy"
 
