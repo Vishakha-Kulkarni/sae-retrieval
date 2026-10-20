@@ -13,7 +13,7 @@ from p2.evaluate import export
 from p2.sae import SAE, load_sae
 from p5.bm25 import doc_terms, scores
 from p5.evaluate import evaluate_row, retrieve
-from p5.expand import expand_neighbours, expand_threshold, write_expanded
+from p5.expand import expand_neighbours, expand_threshold, write_expanded, write_learned
 from p5.harness import read_run
 from p5.model import load_expander
 from p5.pool import FEATURES, build_pool, decoder_directions, eligible, idf_vector, near_miss, neighbour_table
@@ -306,6 +306,27 @@ class LearnedExpanderTests(unittest.TestCase):
         np.save(self.root / 'train.npy', np.array([[.1, .1, .9, 0]], dtype=np.float32))
         with self.assertRaisesRegex(ValueError, 'SAE'):
             self.train()
+
+    def test_learned_expansion_respects_budget_and_keeps_originals(self):
+        self.train()
+        queries = self.root / 'val.query.json'
+        queries.write_text(json.dumps({'v1': {'ids': [0], 'weight': [.9]}}))
+        args = queries, self.root / 'val.npy', self.checkpoint, self.stats_path, self.root / 'expander.pt'
+        expanded = write_learned(*args, self.root / 'L.json')
+        self.assertEqual(expanded['v1']['ids'], [0, 1])
+        self.assertEqual(expanded['v1']['weight'][0], .9)
+        self.assertEqual(json.loads((self.root / 'L.json').read_text()), expanded)
+        self.assertEqual(write_learned(*args, self.root / 'L0.json', budget=0), json.loads(queries.read_text()))
+        self.assertEqual(len(write_learned(*args, self.root / 'L5.json', budget=5)['v1']['ids']), 3)  # pool {1, 2}
+        with self.assertRaises(FileExistsError):
+            write_learned(*args, self.root / 'L.json')
+
+    def test_learned_expansion_refuses_another_sae(self):
+        self.train(steps=2, eval_every=1)
+        other = self.root / 'other.pt'
+        torch.save({'state_dict': SAE(4, 1, 2).upstream_state_dict(), 'meta': {'k': 2, 'threshold': .3}}, other)
+        with self.assertRaisesRegex(ValueError, 'sae'):
+            load_expander(self.root / 'expander.pt', other, self.stats_path)
 
     def test_checkpoint_refuses_other_statistics_and_existing_output(self):
         self.train(steps=2, eval_every=1)

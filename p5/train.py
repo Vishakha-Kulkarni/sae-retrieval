@@ -28,7 +28,7 @@ from . import bm25
 from .evaluate import file_hash
 from .harness import restrict
 from .model import FORMAT_VERSION, Expander, top_budget
-from .pool import FEATURES, build_pool, decoder_directions, idf_vector, neighbour_table
+from .pool import FEATURES, build_pool, pool_context
 
 MAX_MISMATCH = .01  # share of queries whose latents may differ from re-encoding (float ties at the threshold)
 
@@ -42,9 +42,7 @@ def load_embeddings(path):
 def prepare(groups, embeddings, sae, threshold, stats, near, per_concept):
     """Per query: pool concepts, their features, and the constant BM25 terms of the original and pool concepts."""
     matrix, row = embeddings
-    directions = decoder_directions(sae)
-    table, _ = neighbour_table(directions, per_concept)
-    idf_values = idf_vector(stats, len(directions))
+    directions, table, idf_values = pool_context(sae, stats, per_concept)
     examples, mismatched = [], 0
     for group in groups:
         if group['qid'] not in row:

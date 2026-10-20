@@ -54,6 +54,12 @@ def near_miss(pre, threshold, m):
     return [[c for c, v in zip(row, vals) if v > float('-inf')] for row, vals in zip(top.tolist(), values.tolist())]
 
 
+def pool_context(sae, stats, per_concept):
+    """(directions, neighbour indices, IDF per concept), shared by every query's build_pool."""
+    directions = decoder_directions(sae)
+    return directions, neighbour_table(directions, per_concept)[0], idf_vector(stats, len(directions))
+
+
 def build_pool(query, pre, embedding, directions, neighbours, idf_values, threshold, near):
     """KTD5 expansion candidates for one query ({concept: weight}) and their KTD7 features, in FEATURES order.
 
