@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from p1.metrics import evaluate, per_query, randomization_test
-from p5.harness import compare, filter_to_subset, read_qids, read_run
+from p1.metrics import evaluate, holm, per_query, randomization_test
+from p5.harness import compare, filter_to_subset, primary_family, read_qids, read_run
 from p5.mismatch import mismatch_subsets, write_subsets
 
 
@@ -64,6 +64,22 @@ class RandomizationTests(unittest.TestCase):
             randomization_test({}, {})
 
 
+class HolmTests(unittest.TestCase):
+    def test_step_down_adjustment(self):
+        # Sorted 0.012, 0.030, 0.041 against 0.05/3, 0.05/2, 0.05: only the smallest survives.
+        adjusted = holm([.041, .012, .030])
+        for value, expected in zip(adjusted, [.06, .036, .06]):
+            self.assertAlmostEqual(value, expected)
+        self.assertEqual([p < .05 for p in adjusted], [False, True, False])
+
+    def test_adjusted_values_never_below_raw_and_capped(self):
+        raw = [.001, .5, .9, .02]
+        adjusted = holm(raw)
+        self.assertTrue(all(a >= r for a, r in zip(adjusted, raw)))
+        self.assertEqual(max(adjusted), 1.)
+        self.assertEqual(holm([]), [])
+
+
 class RunFileTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -105,6 +121,24 @@ class RunFileTests(unittest.TestCase):
         run = self.write('a.run', 'q1 a 1 1\n')
         with self.assertRaises(ValueError):
             compare(qrels, run, run, self.write('subset.qids', 'q1\nq9\n'))
+
+    def test_primary_family(self):
+        qrels = self.write('qrels', ''.join(f'q{i} 0 d{i} 1\n' for i in range(40)))
+        subset = self.write('mismatch.qids', ''.join(f'q{i}\n' for i in range(20)))
+        hit = self.write('hit.run', ''.join(f'q{i} d{i} 1 1\n' for i in range(40)))
+        miss = self.write('miss.run', ''.join(f'q{i} x 1 1\n' for i in range(40)))
+        result = primary_family(qrels, subset, ('L', hit), {'B0': miss, 'T': miss, 'N': hit}, permutations=2000)
+        tests = result['tests']
+        self.assertEqual(len(tests), 6)
+        self.assertEqual({t['comparison'] for t in tests}, {'L vs B0', 'L vs T', 'L vs N'})
+        self.assertEqual({(t['view'], t['metric']) for t in tests},
+                         {('all', 'recall_at_1000'), ('mismatch_1000', 'mrr_at_10')})
+        for t in tests:
+            self.assertGreaterEqual(t['p_holm'], t['p'])
+            self.assertEqual(t['significant'], t['comparison'] != 'L vs N')
+        b0 = next(t for t in tests if t['comparison'] == 'L vs B0' and t['view'] == 'mismatch_1000')
+        self.assertEqual((b0['ours'], b0['reference'], b0['num_queries']), (1., 0., 20))
+        json.dumps(result)
 
     def test_read_qids_rejects_duplicates(self):
         with self.assertRaises(ValueError):

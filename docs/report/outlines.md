@@ -23,8 +23,9 @@ Report freeze 3 Nov, draft 7 Nov, submission 10 Nov.
 
 ## Ablation discussion (about 0.3 page)
 
-- P5 internal: `[L, *]` against `[T, *]` and `[N, *]`. If L ≈ T, near-miss concepts do most of the work and a
-  lower query threshold is the cheaper fix; say that directly.
+- P5 internal: `[L, *]` against `[T, *]` and `[N, *]`, with the Holm-corrected p-values from
+  `family.dev.json` (6 tests). Only those support "L beats T/N". If L ≈ T, near-miss concepts do most of the
+  work and a lower query threshold is the cheaper fix; say that directly.
 - Budget trade-off: recall against `ms/q` and postings touched across B ∈ {4, 8, 16} (validation row JSONs,
   or a small figure if space allows).
 - One qualitative example: a mismatch query, the concepts L adds and their SAE descriptions, and where the

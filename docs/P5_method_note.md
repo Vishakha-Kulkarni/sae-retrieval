@@ -46,10 +46,12 @@ index, top 1000). Tuning uses the 5,000-query validation split only. Dev and TRE
 | N | B0 + decoder neighbours, weight = source weight × cosine, B tuned | B0 | Rule-based expansion |
 | L | B0 + learned expansion, B tuned | B0; reported next to T and N | P5 method |
 
-**What counts as an improvement (P5 target):** L beats B0 on validation Recall@1000 and on validation
-mismatch@1000 MRR@10, significant under a paired randomisation test (sign flips, 10,000 permutations,
-p < 0.05). Each row is tested once against B0, so no multiple-comparison correction is applied. L against T
-and N is reported side by side; `python -m p5.harness compare` gives their p-values, which are exploratory.
+**What counts as an improvement (P5 target):** L beats B0 on Recall@1000 and on mismatch@1000 MRR@10,
+significant under a paired randomisation test (sign flips, 10,000 permutations) after Holm's correction.
+**Formal family (`ROW=family`, `python -m p5.harness family`):** L vs B0, L vs T and L vs N, each on those
+two metrics: 6 tests, Holm-corrected together at α = 0.05. "L beats the threshold control" and "L beats the
+neighbour rule" are claimed only if their corrected p-values pass. Every other p-value (the † cells of the
+ablation table, other rows vs B0, NDCG on DL, mismatch@10/100) is uncorrected and labelled as such.
 If L does not beat T or N, it stays in the table with the numbers and an explanation. Also reported: NDCG@10
 on TREC DL 19/20, mismatch@10/100, average query concepts, postings touched, latency (mean, p50, p95).
 
@@ -75,9 +77,10 @@ Paths come from `scripts/nscc/env.sh` (`SAE`, `INDEX`, `STATS`, `CORPUS_DB`, `P5
    bash scripts/bm25.sh`, then `python -m p5.mismatch --run … --name validation` and `--name dev`.
 2. `qsub -v ROW=prepare scripts/nscc/p5.pbs` (query latents, training groups), then `ROW=train`.
 3. `ROW=B0`, then `ROW=T,PARAM=0.9` … `0.5`, `ROW=N,PARAM=4|8|16`, `ROW=L` (all on validation).
-4. Pick the best T scale and N budget on validation; L's budget is in its checkpoint.
-5. After the freeze: `ROW=prepare-final`, then each chosen row with `SPLIT=dev|dl19|dl20,FINAL=1`; 3 training
-   seeds for L (`TRAIN_ARGS="--seed …"`, `EXPANDER=…`).
+4. Pick the best T scale and N budget on validation; L's budget is in its checkpoint. Then
+   `ROW=family,T_ROW=T0.7,N_ROW=N8` (with the chosen names) gives the validation result.
+5. After the freeze: `ROW=prepare-final`, then each chosen row with `SPLIT=dev|dl19|dl20,FINAL=1`, and
+   `ROW=family,SPLIT=dev,FINAL=1`; 3 training seeds for L (`TRAIN_ARGS="--seed …"`, `EXPANDER=…`).
 6. `python -m p5.table` over every piece's row JSONs builds the ablation table.
 
 The smoke tier (`RAW=… scripts/smoke.sh`) runs the same `scripts/p5.sh` steps on 100k passages.

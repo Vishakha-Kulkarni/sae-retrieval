@@ -67,3 +67,13 @@ def randomization_test(a, b, permutations=10_000, seed=0, chunk=1000):
         signs = rng.choice((-1., 1.), size=(min(chunk, permutations - start), len(diff)))
         extreme += int((np.abs(signs @ diff / len(diff)) >= observed - 1e-12).sum())
     return (extreme + 1) / (permutations + 1)
+
+
+def holm(p_values):
+    """Holm step-down adjusted p-values, in input order; adjusted < alpha controls family-wise error at alpha."""
+    m = len(p_values)
+    adjusted, running = [0.] * m, 0.
+    for rank, i in enumerate(sorted(range(m), key=lambda i: p_values[i])):
+        running = max(running, min(1., (m - rank) * p_values[i]))
+        adjusted[i] = running
+    return adjusted

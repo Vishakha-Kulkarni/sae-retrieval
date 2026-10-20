@@ -11,6 +11,7 @@
 # ROW=train                   learned expander, selected on validation (TRAIN_ARGS passes extra flags)
 # ROW=B0|T|N|L [SPLIT=val]    one ablation row; run B0 first, the other rows test against B0's run
 #   T: PARAM = threshold scale; N: PARAM = budget; L: PARAM overrides the validation-chosen budget
+# ROW=family T_ROW=T0.7 N_ROW=N8 [SPLIT=val|dev]   Holm-corrected L vs B0/T/N on the primary metrics
 # SPLIT=dev|dl19|dl20 are the final one-shot runs and need FINAL=1 (after the 3 Nov freeze).
 set -euo pipefail
 ROW=${ROW:?set ROW}
@@ -51,6 +52,21 @@ train)
     $PY -m p5.train --train-groups "$P5/train.groups.jsonl" --train-embeddings "$DATA/train_queries.npy" \
         --val-groups "$P5/val.groups.jsonl" --val-embeddings "$DATA/val_queries.npy" --val-qrels "$VAL_QRELS" \
         --checkpoint "$SAE" --stats "$STATS" --output "$EXPANDER" ${TRAIN_ARGS:-}
+    exit ;;
+family)
+    # P5's formal claim: L against B0, T and N on the primary metrics, Holm-corrected. Needs MISMATCH and the
+    # chosen rows' runs, e.g. T_ROW=T0.7 N_ROW=N8 (L_ROW defaults to L).
+    if [ "$SPLIT" != val ] && [ "${FINAL:-0}" != 1 ]; then
+        echo "SPLIT=$SPLIT is a final test split: set FINAL=1 after the freeze" >&2
+        exit 2
+    fi
+    SUBSET=$([ "$SPLIT" = val ] && echo validation || echo "$SPLIT")
+    QRELS=$([ "$SPLIT" = val ] && echo "$VAL_QRELS" || echo "$DEV_QRELS")
+    L_ROW=${L_ROW:-L}
+    $PY -m p5.harness family --qrels "$QRELS" --subset "${MISMATCH:?family needs MISMATCH}/$SUBSET.mismatch_1000.qids" \
+        --run "$L_ROW=$P5/$L_ROW.$SPLIT.run" --against "B0=$P5/B0.$SPLIT.run" \
+        "${T_ROW:?set T_ROW, e.g. T0.7}=$P5/$T_ROW.$SPLIT.run" "${N_ROW:?set N_ROW, e.g. N8}=$P5/$N_ROW.$SPLIT.run" \
+        --output "$P5/family.$SPLIT.json"
     exit ;;
 B0|T|N|L) ;;
 *) echo "unknown ROW=$ROW" >&2; exit 2 ;;

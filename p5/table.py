@@ -4,7 +4,8 @@ python -m p5.table --main B0.dev.json P1.dev.json L.dev.json --dl19 B0.dl19.json
     --dl20 B0.dl20.json L.dl20.json --output ablation       # writes ablation.md and ablation.tex
 
 Rows keep their --main order, with B0 first. A piece that only has a run file evaluates it with
-p5.evaluate (or p5.harness) first. † marks p < 0.05 against B0 (paired randomisation, from the row JSON);
+p5.evaluate (or p5.harness) first. † marks p < 0.05 against B0 (paired randomisation, from the row JSON,
+uncorrected; P5's Holm-corrected claims come from p5.harness family and are reported in the text);
 bold is the best value in each quality column. Missing values render as a dash. Rows within one split
 must share a qrels file, and every p-value must come from a test against this B0's run.
 """
@@ -96,7 +97,8 @@ def render_latex(table):
         lines.append(' & '.join([name.replace('_', r'\_'), *cells]) + r' \\')
     lines += [r'\hline', r'\end{tabular}',
               r'\caption{Ablation on MS MARCO dev and TREC DL 2019/2020. Mis@1k: dev queries where BM25 finds no '
-              r'relevant passage in its top 1000. $^\dagger$: $p<0.05$ against B0 (paired randomisation test). '
+              r'relevant passage in its top 1000. $^\dagger$: $p<0.05$ against B0 (paired randomisation test, '
+              r'uncorrected for multiple comparisons; corrected P5 tests in the text). '
               r'Bold: best per quality column.}', r'\label{tab:ablation}', r'\end{table*}']
     return '\n'.join(lines) + '\n'
 
