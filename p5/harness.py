@@ -62,9 +62,39 @@ def compare(qrels_path, run_a, run_b, subset=None, gain='exponential', permutati
                         for m in METRICS}}
 
 
+def filter_to_subset(qrels_path, queries_path, size, prefix):
+    """Smoke tier: keep judgments on passages 0..size-1 and the queries with a positive one among them.
+
+    Writes <prefix>.qrels and <prefix>.queries.tsv; returns the kept query IDs in qrels order.
+    """
+    outputs = Path(f'{prefix}.qrels'), Path(f'{prefix}.queries.tsv')
+    for path in outputs:
+        if path.exists():
+            raise FileExistsError(f'{path} exists; choose a new prefix')
+    lines, kept = [], {}
+    for line in Path(qrels_path).read_text().splitlines():
+        qid, _, docid, relevance = line.split()
+        if int(docid) < size:
+            lines.append((qid, line))
+            if int(relevance) > 0:
+                kept.setdefault(qid, None)
+    text = dict(line.split('\t', 1) for line in Path(queries_path).read_text().splitlines() if line)
+    missing = kept.keys() - text.keys()
+    if missing:
+        raise ValueError(f'{len(missing)} kept queries have no text, e.g. {sorted(missing)[0]}')
+    outputs[0].write_text(''.join(line + '\n' for qid, line in lines if qid in kept))
+    outputs[1].write_text(''.join(f'{qid}\t{text[qid]}\n' for qid in kept))
+    return list(kept)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True)
+    smoke = commands.add_parser('filter', help='Smoke tier: restrict qrels and queries to the first N passages')
+    smoke.add_argument('--qrels', required=True)
+    smoke.add_argument('--queries', required=True, help='MS MARCO queries TSV (qid<TAB>text)')
+    smoke.add_argument('--size', type=int, required=True, help='Passages 0..size-1 are encoded and indexed')
+    smoke.add_argument('--prefix', required=True, help='Writes <prefix>.qrels and <prefix>.queries.tsv')
     cmp = commands.add_parser('compare', help='Metrics for two runs and paired randomisation p-values')
     cmp.add_argument('--qrels', required=True)
     cmp.add_argument('--run-a', required=True, help='Reference run, e.g. B0')
@@ -75,6 +105,10 @@ def main():
     cmp.add_argument('--permutations', type=int, default=10_000)
     cmp.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
+    if args.command == 'filter':
+        kept = filter_to_subset(args.qrels, args.queries, args.size, args.prefix)
+        print(f'kept {len(kept)} queries')
+        return
     print(json.dumps(compare(args.qrels, args.run_a, args.run_b, args.subset, args.gain,
                              args.permutations, args.seed), indent=2))
 

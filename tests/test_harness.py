@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 from p1.metrics import evaluate, per_query, randomization_test
-from p5.harness import compare, read_qids, read_run
+from p5.harness import compare, filter_to_subset, read_qids, read_run
 from p5.mismatch import mismatch_subsets, write_subsets
 
 
@@ -109,6 +109,28 @@ class RunFileTests(unittest.TestCase):
     def test_read_qids_rejects_duplicates(self):
         with self.assertRaises(ValueError):
             read_qids(self.write('dup.qids', 'q1\nq1\n'))
+
+
+class SmokeFilterTests(unittest.TestCase):
+    def test_keeps_only_queries_and_judgments_inside_the_subset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'qrels').write_text('q1 0 150 1\nq2 0 5 1\nq2 0 120 1\nq3 0 7 0\nq4 0 99 1\n')
+            (root / 'queries.tsv').write_text('q1\tone\nq2\ttwo\nq3\tthree\nq4\tfour\nq5\tfive\n')
+            kept = filter_to_subset(root / 'qrels', root / 'queries.tsv', 100, root / 'smoke')
+            self.assertEqual(kept, ['q2', 'q4'])
+            self.assertEqual((root / 'smoke.qrels').read_text(), 'q2 0 5 1\nq4 0 99 1\n')
+            self.assertEqual((root / 'smoke.queries.tsv').read_text(), 'q2\ttwo\nq4\tfour\n')
+            with self.assertRaises(FileExistsError):
+                filter_to_subset(root / 'qrels', root / 'queries.tsv', 100, root / 'smoke')
+
+    def test_query_text_missing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'qrels').write_text('q1 0 5 1\n')
+            (root / 'queries.tsv').write_text('q9\tother\n')
+            with self.assertRaises(ValueError):
+                filter_to_subset(root / 'qrels', root / 'queries.tsv', 100, root / 'smoke')
 
 
 class MismatchTests(unittest.TestCase):
