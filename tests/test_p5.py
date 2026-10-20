@@ -7,13 +7,17 @@ import unittest
 import numpy as np
 import torch
 
-from p1.data import load_stats
+from p1.data import bm25, load_stats
+from p1.prepare import build_corpus
 from p2.evaluate import export
 from p2.sae import SAE, load_sae
+from p5.bm25 import doc_terms, scores
 from p5.evaluate import evaluate_row, retrieve
 from p5.expand import expand_neighbours, expand_threshold, write_expanded
 from p5.harness import read_run
-from p5.pool import decoder_directions, eligible, near_miss, neighbour_table
+from p5.model import load_expander
+from p5.pool import FEATURES, build_pool, decoder_directions, eligible, idf_vector, near_miss, neighbour_table
+from p5.train import train_from_files
 from p5.upstream import upstream_functions
 
 
@@ -197,6 +201,120 @@ class ExpandTests(unittest.TestCase):
         row = evaluate_row('N2', root / 'n.json', index_path, root / 'qrels')
         self.assertEqual(row['metrics']['all']['mrr_at_10'], 1.)
         self.assertGreater(row['avg_query_concepts'], 1.5)
+
+
+class BM25Tests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        root = Path(self.directory.name)
+        index_path = build_index(root)
+        with open(index_path, 'rb') as source:
+            self.index = pickle.load(source)
+        build_corpus(root / 'passages.jsonl', root / 'corpus.db', root / 'stats.json')
+        self.stats = load_stats(root / 'stats.json')
+        self.docs = [{c: w for c, w in zip(p['ids'], p['weight'])} for p in PASSAGES]
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def test_matches_upstream_retrieval_scores(self):
+        upstream = upstream_functions('latent_retrieve.py')
+        query = {1: .6, 3: .8, 5: .3}
+        official = dict(upstream['retrieve_one']([str(c) for c in query], list(query.values()),
+                                                 self.index['inverted_index'], self.index['document_lengths'],
+                                                 self.index['avgdl']))
+        ours = scores(doc_terms(self.docs, list(query), self.stats), torch.tensor(list(query.values())),
+                      len(self.docs))
+        for docid, score in enumerate(ours.tolist()):
+            self.assertAlmostEqual(score, official.get(docid, 0.), places=5)
+
+    def test_zero_added_weight_is_the_original_query(self):
+        query = {1: .6, 3: .8}
+        columns = list(query) + [2, 4]
+        ours = scores(doc_terms(self.docs, columns, self.stats), torch.tensor([.6, .8, 0., 0.]), len(self.docs))
+        for doc, score in zip(self.docs, ours.tolist()):
+            self.assertAlmostEqual(score, bm25({c: v for c, v in query.items() if c in doc}, doc, self.stats),
+                                   places=5)
+
+    def test_gradient_only_for_concepts_in_candidates(self):
+        weights = torch.tensor([.5, .5, .5], requires_grad=True)
+        scores(doc_terms(self.docs, [4, 2, 77], self.stats), weights, len(self.docs)).sum().backward()
+        self.assertNotEqual(weights.grad[0].item(), 0.)
+        self.assertNotEqual(weights.grad[1].item(), 0.)
+        self.assertEqual(weights.grad[2].item(), 0.)
+
+
+class LearnedExpanderTests(unittest.TestCase):
+    """One query whose teacher-preferred passage only wins once near-miss concept 1 is added."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.directory.name)
+        self.checkpoint = self.root / 'sae.pt'
+        torch.save({'state_dict': tiny_sae().upstream_state_dict(), 'meta': {'k': 2, 'threshold': .3}},
+                   self.checkpoint)
+        self.stats_path = self.root / 'stats.json'
+        write_stats(self.stats_path, {0: 2, 1: 1, 2: 1, 3: 8})
+        candidates = [{'docid': '0', 'concepts': {'0': .6}, 'teacher_score': 5.},
+                      {'docid': '1', 'concepts': {'0': .4, '1': .6}, 'teacher_score': 10.},
+                      {'docid': '2', 'concepts': {'2': .5}, 'teacher_score': 0.}]
+        for split, qid in (('train', 't1'), ('val', 'v1')):
+            (self.root / f'{split}.groups.jsonl').write_text(
+                json.dumps({'qid': qid, 'query': {'0': .9}, 'candidates': candidates}) + '\n')
+            np.save(self.root / f'{split}.npy', np.array([[.9, .25, 0, 0]], dtype=np.float32))
+            (self.root / f'{split}.ids').write_text(qid + '\n')
+        (self.root / 'val.qrels').write_text('v1 0 1 1\n')
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def train(self, output='expander.pt', **options):
+        root = self.root
+        return train_from_files(root / 'train.groups.jsonl', root / 'train.npy', root / 'val.groups.jsonl',
+                                root / 'val.npy', root / 'val.qrels', self.checkpoint, self.stats_path,
+                                root / output, **{'budgets': (1,), 'steps': 60, 'batch': 1, 'lr': .05,
+                                                  'eval_every': 20, 'near': 4, 'per_concept': 3, **options})
+
+    def test_pool_excludes_query_and_nonpositive_idf_concepts(self):
+        model, stats = tiny_sae(), load_stats(self.stats_path)
+        x = torch.tensor([.9, .25, 0, 0])
+        directions = decoder_directions(model)
+        table, _ = neighbour_table(directions, 3)
+        concepts, features = build_pool({0: .9}, model.pre_activation(x[None])[0].detach(), x, directions, table,
+                                        idf_vector(stats, 4), .3, 4)
+        self.assertEqual(concepts.tolist(), [1, 2])
+        self.assertEqual(features.shape, (2, len(FEATURES)))
+
+    def test_training_lowers_loss_and_adds_the_helpful_concept(self):
+        payload = self.train()
+        self.assertEqual(payload['baseline_validation_metrics']['mrr_at_10'], .5)
+        self.assertEqual(payload['validation_metrics']['mrr_at_10'], 1.)
+        self.assertEqual(payload['budget'], 1)
+        losses = [entry['train_loss'] for entry in payload['log'] if 'train_loss' in entry]
+        self.assertLess(losses[-1], losses[0])
+        model, _ = load_expander(self.root / 'expander.pt', self.checkpoint, self.stats_path)
+        self.assertEqual(model.state_dict().keys(), payload['state_dict'].keys())
+
+    def test_train_validation_overlap(self):
+        (self.root / 'val.groups.jsonl').write_text((self.root / 'train.groups.jsonl').read_text())
+        (self.root / 'val.ids').write_text('t1\n')
+        (self.root / 'val.qrels').write_text('t1 0 1 1\n')
+        with self.assertRaises(ValueError):
+            self.train()
+
+    def test_query_latents_from_another_sae(self):
+        np.save(self.root / 'train.npy', np.array([[.1, .1, .9, 0]], dtype=np.float32))
+        with self.assertRaisesRegex(ValueError, 'SAE'):
+            self.train()
+
+    def test_checkpoint_refuses_other_statistics_and_existing_output(self):
+        self.train(steps=2, eval_every=1)
+        other = self.root / 'other.json'
+        write_stats(other, {0: 2, 1: 1, 2: 2, 3: 8})
+        with self.assertRaisesRegex(ValueError, 'stats'):
+            load_expander(self.root / 'expander.pt', self.checkpoint, other)
+        with self.assertRaises(FileExistsError):
+            self.train(steps=2, eval_every=1)
 
 
 if __name__ == '__main__':

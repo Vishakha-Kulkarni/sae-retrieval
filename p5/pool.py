@@ -29,13 +29,22 @@ def neighbour_table(directions, n, chunk=1024):
     return torch.cat(indices).numpy(), torch.cat(cosines).numpy()
 
 
+FEATURES = ('pre_activation', 'query_cosine', 'neighbour_score', 'idf', 'log_active_count')
+
+
+def idf_vector(stats, num_concepts):
+    """BM25 IDF per concept; NaN outside the index vocabulary."""
+    values = np.full(num_concepts, np.nan)
+    for concept in stats['document_frequency']:
+        if concept >= num_concepts:
+            raise ValueError(f'stats concept {concept} is outside the {num_concepts}-concept SAE dictionary')
+        values[concept] = idf(concept, stats)
+    return values
+
+
 def eligible(stats, num_concepts):
     """Concepts an expansion may add: present in the index vocabulary with IDF > 0 (others lower scores)."""
-    mask = np.zeros(num_concepts, dtype=bool)
-    for concept in stats['document_frequency']:
-        if concept < num_concepts and idf(concept, stats) > 0:
-            mask[concept] = True
-    return mask
+    return idf_vector(stats, num_concepts) > 0
 
 
 def near_miss(pre, threshold, m):
@@ -43,3 +52,24 @@ def near_miss(pre, threshold, m):
     below = pre.masked_fill((pre > threshold) | (pre <= 0), float('-inf'))
     values, top = below.topk(min(m, pre.shape[1]), dim=1)
     return [[c for c, v in zip(row, vals) if v > float('-inf')] for row, vals in zip(top.tolist(), values.tolist())]
+
+
+def build_pool(query, pre, embedding, directions, neighbours, idf_values, threshold, near):
+    """KTD5 expansion candidates for one query ({concept: weight}) and their KTD7 features, in FEATURES order.
+
+    pre: SAE pre-activations [m]; embedding: SimLM vector [d]; neighbours: neighbour_table indices [m, N].
+    """
+    active = list(query)
+    pool = set(near_miss(pre[None], threshold, near)[0]) | set(neighbours[active].ravel().tolist())
+    concepts = np.array(sorted(c for c in pool if idf_values[c] > 0 and c not in query), dtype=np.int64)
+    d = directions[concepts]
+    query_cosine = d @ (embedding / embedding.norm().clamp(min=1e-12))
+    if active:
+        weights = torch.tensor(list(query.values()), dtype=d.dtype)
+        neighbour = (d @ directions[active].T * weights).max(1).values
+    else:
+        neighbour = torch.zeros(len(concepts))
+    features = torch.stack([pre[concepts], query_cosine, neighbour,
+                            torch.as_tensor(idf_values[concepts], dtype=d.dtype),
+                            torch.full((len(concepts),), float(np.log1p(len(active))))], 1)
+    return concepts, features
