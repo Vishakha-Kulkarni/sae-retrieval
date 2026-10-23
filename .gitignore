@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 artifacts/
 data/
+p4/test
+data/
+runs/
+tune_b0/
+og/
+p4_pyserini*/
+p4/test/
+p4/**/__pycache__/
+*.bak
+*.trec
+*.pt
+*.npy
+*.jsonl
