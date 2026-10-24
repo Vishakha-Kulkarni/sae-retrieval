@@ -57,6 +57,21 @@ class P2Tests(unittest.TestCase):
         self.assertEqual(recon.shape, (10, 16))
         self.assertTrue(torch.allclose(model.linear2.weight.norm(dim=-1), torch.ones(16), atol=1e-5))
 
+    def test_atom_decoder_norm_and_checkpoint_round_trip(self):
+        model = SAE(16, 4, 3, decoder_norm='atom')
+        recon, _, _, _ = model(torch.randn(10, 16))
+        recon.square().sum().backward()
+        model.project_decoder_grad()
+        self.assertTrue(torch.allclose(model.linear2.weight.norm(dim=0), torch.ones(64), atol=1e-5))
+        # Projected gradient keeps each unit-norm decoder vector on its sphere (no radial component).
+        radial = (model.linear2.weight.grad * model.linear2.weight).sum(0)
+        self.assertTrue(torch.allclose(radial, torch.zeros(64), atol=1e-5))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'atom.pt'
+            torch.save({'state_dict': model.upstream_state_dict(),
+                        'meta': {'k': 3, 'args': {'decoder_norm': 'atom'}}}, path)
+            self.assertEqual(load_sae(path)[0].decoder_norm, 'atom')
+
     def test_ranking_losses_vanish_when_student_equals_teacher(self):
         q, p = torch.randn(4, 8), torch.randn(4, 5, 8)
         self.assertAlmostEqual(listwise_loss(q, p, q, p).item(), 0., places=5)
@@ -84,7 +99,9 @@ class P2Tests(unittest.TestCase):
             first = json.loads((root / 'p.jsonl').read_text().splitlines()[0])
             self.assertEqual(set(first), {'docid', 'ids', 'weight'})
             self.assertEqual(first['weight'], sorted(first['weight'], reverse=True))
-            self.assertEqual(set(json.loads((root / 'q.json').read_text())), set('abcde'))
+            queries = json.loads((root / 'q.json').read_text())
+            self.assertEqual(set(queries), set('abcde'))
+            self.assertTrue(all(isinstance(c, str) for q in queries.values() for c in q['ids']))
 
     def test_training_runs_end_to_end_for_every_objective(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -105,6 +122,7 @@ class P2Tests(unittest.TestCase):
                 self.assertEqual([r['step'] for r in log], [20, 40])
                 self.assertTrue(np.isfinite(log[-1]['nmse']))
                 self.assertTrue((out / 'best.pt').exists())
+                self.assertTrue((out / 'step_20.pt').exists() and (out / 'step_40.pt').exists())
             # Fine-tuning from a checkpoint evaluates the starting point first (step 0).
             out = root / 'finetune'
             subprocess.run(base + ['--output', str(out), '--init', str(root / 'none/last.pt')],
@@ -116,6 +134,14 @@ class P2Tests(unittest.TestCase):
                                       str(root / 'val.qrels'), '--nmse-sample', '600', '--device', 'cpu'],
                                      cwd=ROOT, check=True, capture_output=True, text=True)
             self.assertIn('clsr_bm25', json.loads(metrics.stdout))
+            paper = subprocess.run([sys.executable, '-m', 'p2.evaluate', 'table1', '--checkpoint',
+                                    str(out / 'best.pt'), '--passages', str(root / 'passages.npy'),
+                                    '--queries', str(root / 'val_queries.npy'), '--qrels',
+                                    str(root / 'val.qrels'), '--device', 'cpu'],
+                                   cwd=ROOT, check=True, capture_output=True, text=True)
+            result = json.loads(paper.stdout)
+            self.assertEqual(result['num_queries'], 80)
+            self.assertGreater(result['recall_at_1000'], 0.99)  # top-1000 covers the 600-passage corpus
 
 
 if __name__ == '__main__':

@@ -1,0 +1,25 @@
+#!/bin/bash
+# Export passage and MS MARCO dev-small query latents from an SAE checkpoint, in the upstream format.
+# qsub -P personal-riddhima -v CKPT_PATH=...,TAG=B0 scripts/nscc/export_latents.pbs
+#PBS -N p2_export
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=64gb
+#PBS -l walltime=04:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+OUT="$HOME/scratch/sae/latents/$TAG"
+mkdir -p "$OUT"
+python -m p2.evaluate export --checkpoint "$CKPT_PATH" --embeddings "$DATA/dev_queries.npy" \
+    --output "$OUT/dev_all.query.json" --queries --device cuda
+# Keep only the 6,980 judged dev-small queries, as the paper evaluates.
+python - "$OUT" "$RAW/qrels.dev.small.tsv" <<'EOF'
+import json, sys
+out, qrels = sys.argv[1], sys.argv[2]
+judged = {line.split()[0] for line in open(qrels) if line.strip()}
+queries = json.load(open(f'{out}/dev_all.query.json'))
+json.dump({q: v for q, v in queries.items() if q in judged}, open(f'{out}/dev.query.json', 'w'))
+print('dev-small queries:', sum(q in judged for q in queries))
+EOF
+python -m p2.evaluate export --checkpoint "$CKPT_PATH" --embeddings "$DATA/passages.npy" \
+    --output "$OUT/passages.latent.jsonl" --device cuda

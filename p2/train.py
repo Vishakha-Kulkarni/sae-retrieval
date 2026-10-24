@@ -112,6 +112,8 @@ def main():
     parser.add_argument('--init', help='Start from a checkpoint (e.g. the released SAE) instead of scratch')
     parser.add_argument('--init-threshold', type=float, help='Threshold of a released --init checkpoint')
     parser.add_argument('--hidden-mult', type=int, default=32)
+    parser.add_argument('--decoder-norm', choices=['row', 'atom'], default='row',
+                        help="row = upstream code (default); atom = unit-norm decoder vector per latent, as the paper describes")
     parser.add_argument('--k', type=int, default=32)
     parser.add_argument('--batch', type=int, default=4096, help='Reconstruction batch (upstream 4096)')
     parser.add_argument('--lr', type=float, default=5e-5)
@@ -133,6 +135,8 @@ def main():
                         help='Model selection: best MRR among evals with NMSE <= ratio * reference NMSE')
     parser.add_argument('--reference-nmse', type=float,
                         help='NMSE of the reconstruction-only baseline; defaults to the first evaluation')
+    parser.add_argument('--keep-steps', action=argparse.BooleanOptionalAction, default=True,
+                        help='Also keep step_<N>.pt at every evaluation (default on)')
     parser.add_argument('--in-ram', action='store_true',
                         help='Load passage embeddings into memory (8.8M x 768 float32 = 27 GB) instead of memory-mapping')
     parser.add_argument('--seed', type=int, default=42)
@@ -152,7 +156,7 @@ def main():
         if threshold is None:
             parser.error('--init-threshold is required for released checkpoints')
     else:
-        model = SAE(data['passages'].shape[1], args.hidden_mult, args.k, args.dead_threshold)
+        model = SAE(data['passages'].shape[1], args.hidden_mult, args.k, args.dead_threshold, args.decoder_norm)
         threshold = None
     model.to(device)
     scale = torch.nn.Parameter(torch.zeros((), device=device))
@@ -179,6 +183,8 @@ def main():
         payload = {'state_dict': model.upstream_state_dict(), 'meta': {'k': args.k, 'threshold': current,
                    'args': vars(args), 'validation': metrics, 'step': step, 'rank_scale': scale.item()}}
         torch.save(payload, out / 'last.pt')
+        if args.keep_steps:
+            torch.save(payload, out / f'step_{step}.pt')  # ~150 MB each; last.pt is overwritten
         eligible = metrics['nmse'] <= args.max_nmse_ratio * reference_nmse or step == 0
         score = metrics['clsr_bm25']['mrr_at_10']
         if eligible and (best is None or score > best):

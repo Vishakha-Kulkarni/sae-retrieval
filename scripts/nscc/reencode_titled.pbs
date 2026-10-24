@@ -1,0 +1,43 @@
+#!/bin/bash
+# Re-encode passages from SimLM's own titled corpus (what upstream run.sh encodes), into $DATA_T.
+# Queries have no titles, so their embeddings are reused. Ends with the reproduction gate:
+# original SimLM dense MRR@10 on dev-small should be ~0.411 (paper Table 1 baseline).
+# Prereq (login node, has internet):
+#   cd $HOME/scratch/sae/raw && wget https://huggingface.co/datasets/intfloat/simlm-msmarco/resolve/main/msmarco_bm25_official.zip && unzip msmarco_bm25_official.zip
+# qsub -P personal-riddhima scripts/nscc/reencode_titled.pbs
+#PBS -N p2_reencode
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=10:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+export DATA_T=${DATA_T:-$HOME/scratch/sae/data_titled}
+CORPUS=${CORPUS:-$RAW/msmarco_bm25_official/passages.jsonl.gz}
+mkdir -p "$DATA_T"
+[ -e "$DATA_T/passages.npy" ] || python -m p2.encode passages --input "$CORPUS" --output "$DATA_T/passages.npy" --batch-size 1024
+for f in train_queries val_queries dev_queries; do
+    ln -sfn "$DATA/$f.npy" "$DATA_T/$f.npy"; ln -sfn "$DATA/$f.ids" "$DATA_T/$f.ids"
+done
+# Reproduction gate first, so a bad encode is caught before the slow train candidates.
+python - <<'PY'
+import json, os, numpy as np
+from p1.metrics import read_qrels, evaluate
+from p2.candidates import search
+d, raw = os.environ.get('DATA_T', os.path.expanduser('~/scratch/sae/data_titled')), os.environ['RAW']
+qrels = read_qrels(f'{raw}/qrels.dev.small.tsv')
+ids = open(f'{d}/dev_queries.ids').read().split()
+keep = [i for i, q in enumerate(ids) if q in qrels]
+cands, _ = search(np.load(f'{d}/passages.npy', mmap_mode='r'), np.load(f'{d}/dev_queries.npy', mmap_mode='r')[keep],
+                  top_k=1000, device='cuda')
+result = evaluate({ids[i]: [str(x) for x in row] for i, row in zip(keep, cands)}, qrels)
+print(json.dumps({'GATE_original_simlm_dense_titled': result, 'paper': 0.411, 'untitled_ours': 0.3928}))
+json.dump(result, open(f'{d}/dense_dev_check.json', 'w'))
+PY
+python -m p2.candidates --passages "$DATA_T/passages.npy" --queries "$DATA_T/val_queries.npy" \
+    --qrels "$RAW/split/validation.qrels" --output-prefix "$DATA_T/val"
+for name in val_queries.npy val_queries.ids val.cands.npy val.teacher.npy val.pos.npy val.run; do
+    ln -sfn "$name" "$DATA_T/${name/val/validation}"
+done
+python -m p2.candidates --passages "$DATA_T/passages.npy" --queries "$DATA_T/train_queries.npy" \
+    --qrels "$RAW/split/train.qrels" --output-prefix "$DATA_T/train"

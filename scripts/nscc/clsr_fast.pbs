@@ -1,0 +1,20 @@
+#!/bin/bash
+# Released CL-SR scoring (vectorised p2.clsr, verified score-for-score against upstream latent_retrieve.py),
+# then upstream cl-sr/evaluate.py unchanged. Paper target (k=32): MRR@10 0.368 on MS MARCO dev-small.
+# qsub -P personal-riddhima -v TAG=B0 scripts/nscc/clsr_fast.pbs   (CHECK_RUN=<upstream run> to verify parity)
+#PBS -N p2_clsrfast
+#PBS -q normal
+#PBS -l select=1:ncpus=8:mem=128gb
+#PBS -l walltime=04:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+LAT="$HOME/scratch/sae/latents/$TAG"
+UP="$REPO/upstream/Decoding-Dense-Embeddings/cl-sr"
+MAXL=${MAX_LATENTS:-24}
+mkdir -p "$LAT/fast_max$MAXL"
+python -m p2.clsr --passage-latents "$LAT/passages.latent.jsonl" --query-latents "$LAT/dev.query.json" \
+    --output "$LAT/fast_max$MAXL/dev.tsv" --max-latents "$MAXL" ${CHECK_RUN:+--check-run "$CHECK_RUN"}
+ln -sf "$RAW/qrels.dev.small.tsv" "$LAT/dev_qrels.txt"
+cd "$LAT" && python "$UP/evaluate.py" --eval_data dev --result_path "$LAT/fast_max$MAXL/dev.tsv" \
+    | tee "$LAT/clsr_fast_max$MAXL.dev.metrics.txt"
