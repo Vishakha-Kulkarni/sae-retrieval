@@ -74,12 +74,13 @@ same command for each fixed-k file. For adaptive output, do not set
 query encoding, scoring constants, corpus, and index code fixed when comparing
 latency and size. Time the same validation query set for each variant.
 
-For a cluster node with sufficient RAM, `scripts/nscc/p3_full_eval.pbs` runs
-the fixed k=32 and screened adaptive (`tau=3.5`, min=8, max=32) full-corpus
-validation comparison sequentially. Copy the checkpoint and required files to
-the cluster paths, then submit that PBS job. The upstream Python-object index
-needs a high-memory node; this workstation has 16 GiB RAM and is not suitable
-for building the full index safely.
+The full-corpus run is split so the GPU allocation is used only for SAE
+encoding. Copy the checkpoint and required data to the cluster paths, then
+submit `scripts/nscc/p3_encode_full.pbs` for query and passage encoding. After
+it completes, submit `scripts/nscc/p3_index_eval.pbs` once with
+`VARIANT=fixed32` and once with `VARIANT=adaptive`; those CPU jobs build and
+evaluate one index each on a high-memory node. The workstation has 16 GiB RAM
+and is not suitable for the upstream Python-object index builder.
 
 ## Selection rule
 

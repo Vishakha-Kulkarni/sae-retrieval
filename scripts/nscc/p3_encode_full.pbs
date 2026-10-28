@@ -1,0 +1,42 @@
+#!/bin/bash
+# GPU stage: export frozen validation queries and both full-corpus passage variants.
+# Submit after copying inputs to shared NSCC storage:
+#   qsub -P personal-riddhima -v REPO=...,DATA=...,SAE=... scripts/nscc/p3_encode_full.pbs
+#PBS -N p3_encode
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=06:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+
+SAE=${SAE:-$DATA/B0_titled_200k.pt}
+P3_OUT=${P3_OUT:-$DATA/p3_full_eval}
+TAU=${TAU:-3.5}
+MIN_CONCEPTS=${MIN_CONCEPTS:-8}
+MAX_CONCEPTS=${MAX_CONCEPTS:-32}
+BATCH_SIZE=${BATCH_SIZE:-1024}
+
+for path in "$SAE" "$DATA/passages.npy" "$DATA/passages.ids" \
+            "$DATA/validation_queries.npy" "$DATA/validation_queries.ids"; do
+    test -f "$path" || { echo "Missing required input: $path" >&2; exit 2; }
+done
+
+mkdir -p "$P3_OUT"
+
+# Query encoding is done once with the checkpoint's stored threshold.
+python -m p2.evaluate export --checkpoint "$SAE" \
+    --embeddings "$DATA/validation_queries.npy" \
+    --output "$P3_OUT/validation.query.json" --queries
+
+python -m p3.extract_passage_latents --checkpoint "$SAE" \
+    --input-embeddings "$DATA/passages.npy" \
+    --output "$P3_OUT/fixed32.passages.jsonl" --mode fixed --k 32 \
+    --batch-size "$BATCH_SIZE" --device cuda:0
+python -m p3.extract_passage_latents --checkpoint "$SAE" \
+    --input-embeddings "$DATA/passages.npy" \
+    --output "$P3_OUT/adaptive.passages.jsonl" --mode adaptive \
+    --threshold "$TAU" --min-concepts "$MIN_CONCEPTS" --max-concepts "$MAX_CONCEPTS" \
+    --batch-size "$BATCH_SIZE" --device cuda:0
+
+echo "Passage latent files are ready in $P3_OUT; run p3_index_eval.pbs for each variant."
