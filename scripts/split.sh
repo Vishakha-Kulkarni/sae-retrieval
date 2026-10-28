@@ -28,7 +28,7 @@ if [ ! -e "$OUT/queries.dev.small.tsv" ]; then  # not shipped in queries.tar.gz
         > "$OUT/queries.dev.small.tsv"
 fi
 if [ ! -e "$OUT/split" ]; then
-    (cd "$REPO" && $PY -m p1.prepare split --queries "$OUT/queries.train.tsv" --qrels "$OUT/qrels.train.tsv" \
+    (cd "$REPO" && "$PY" -m p1.prepare split --queries "$OUT/queries.train.tsv" --qrels "$OUT/qrels.train.tsv" \
         --output-dir "$OUT/split" --size 5000 --seed 42)
 fi
 
