@@ -55,12 +55,11 @@ CL-SR index before treating it as a result.
 
 ### Full-index results
 
-Still required: run `scripts/nscc/p3_encode_full.pbs` to export full-corpus
-fixed k=32 and adaptive (`tau=3.5`, min=8, max=32) passages with the GPU, then
-submit `scripts/nscc/p3_index_eval.pbs` separately for each variant on a
-high-memory CPU node. Record corpus-wide metrics, serialized index sizes, and
-query latencies. Use the same machine and query set for latency measurements.
-Dev and TREC rows are final results and must not feed back into tuning.
+Still required: run `scripts/nscc/p3_full_eval.pbs` on a high-memory node to
+export and search full-corpus fixed k=32 and adaptive (`tau=3.5`, min=8,
+max=32), then record corpus-wide metrics, serialized index sizes, and query
+latencies. Use the same machine and query set for latency measurements. Dev and
+TREC rows are final results and must not feed back into tuning.
 
 | Variant | Split | MRR@10 | Recall@1000 | NDCG@10 | Mean concepts/passage | Index size (GiB) | Mean query latency (ms) |
 |---|---|---:|---:|---:|---:|---:|---:|
