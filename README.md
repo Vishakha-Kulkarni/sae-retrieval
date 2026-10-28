@@ -23,6 +23,9 @@ activations with minimum and maximum per-passage counts and emits the sparse
 rows expected by the upstream CL-SR pipeline. `p3/extract_passage_latents.py`
 provides adaptive and fixed-k extraction modes; `python -m p3.validation_sweep`
 screens threshold/min/max settings on validation dense candidates.
+`python -m p3.evaluate_index` builds the pinned upstream CL-SR index and reports
+full retrieval metrics, serialized index size, and query latency for validation
+or final evaluation.
 
 Tune the adaptive threshold on the training-derived validation split only. The
 P3 experiment still needs the team's frozen SAE checkpoint, passage embeddings,
