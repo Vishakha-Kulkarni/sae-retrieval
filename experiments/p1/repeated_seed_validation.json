@@ -1,0 +1,107 @@
+{
+  "scope": "Validation reranking, not a held-out or full-corpus retrieval claim",
+  "seeds": {
+    "42": {
+      "metrics": {
+        "method": "learned",
+        "k2": null,
+        "k1": null,
+        "b": null,
+        "mrr_at_10": 0.40196682539682377,
+        "ndcg_at_10": 0.4639091117275679,
+        "recall_at_1000": 0.94715,
+        "num_queries": 5000
+      },
+      "best_epoch": 7,
+      "selection_gpu_mrr_at_10": 0.40196682539682377,
+      "cpu_gpu_mrr_difference": 0.0,
+      "checkpoint_sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf"
+    },
+    "43": {
+      "metrics": {
+        "method": "learned",
+        "k2": null,
+        "k1": null,
+        "b": null,
+        "mrr_at_10": 0.4009055555555542,
+        "ndcg_at_10": 0.46324381773772993,
+        "recall_at_1000": 0.94715,
+        "num_queries": 5000
+      },
+      "best_epoch": 9,
+      "selection_gpu_mrr_at_10": 0.4009055555555542,
+      "cpu_gpu_mrr_difference": 0.0,
+      "checkpoint_sha256": "5ef3e8415a7768860fff7560a6de35b4bce702d6907ee8a36d2f7588738f0e48"
+    },
+    "44": {
+      "metrics": {
+        "method": "learned",
+        "k2": null,
+        "k1": null,
+        "b": null,
+        "mrr_at_10": 0.4035473015872998,
+        "ndcg_at_10": 0.46588443091174886,
+        "recall_at_1000": 0.94715,
+        "num_queries": 5000
+      },
+      "best_epoch": 9,
+      "selection_gpu_mrr_at_10": 0.4035273015872997,
+      "cpu_gpu_mrr_difference": 2.0000000000075513e-05,
+      "checkpoint_sha256": "c50391b0f0e634e66c25e0873d780add56764bef119c0b29251cb5a32fb04d11"
+    }
+  },
+  "summary": {
+    "mrr_at_10": {
+      "mean": 0.4021398941798926,
+      "sample_std": 0.0013293495126623413
+    },
+    "ndcg_at_10": {
+      "mean": 0.4643457867923489,
+      "sample_std": 0.0013733984556026338
+    },
+    "recall_at_1000": {
+      "mean": 0.94715,
+      "sample_std": 0.0
+    }
+  },
+  "identical_prepared_data_sha256": {
+    "train": "3590eefef048632b7157acf95637f278f5faa3c047f718c0a81733b4cadb2554",
+    "validation": "e29dd3a28f68177a84c9bf24823f4415b83a7d0b18e31146a36747f23c18077e",
+    "qrels": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+    "stats": "f845d9f60db57e235025790e22e5226e6ff68119bf6101cbeaeee305b2936969"
+  },
+  "repeat_slurm_job": "50396",
+  "text_overlap_audit": {
+    "training_queries": 5000,
+    "validation_queries": 5000,
+    "overlapping_query_ids": 0,
+    "overlapping_exact_query_texts": 0,
+    "overlapping_normalized_query_texts": 2,
+    "validation_ids_with_normalized_training_text": [
+      "1070491",
+      "714938"
+    ],
+    "scope": "ID and text overlap audit; does not prove absence of semantic duplicates or overfitting",
+    "sensitivity_excluding_normalized_overlaps": {
+      "released_bm25": {
+        "mrr_at_10": 0.3423721869700261,
+        "ndcg_at_10": 0.40632012097361475,
+        "recall_at_1000": 0.9471288515406162,
+        "num_queries": 4998
+      },
+      "tuned_bm25": {
+        "mrr_at_10": 0.3497807059331669,
+        "ndcg_at_10": 0.4136739886039549,
+        "recall_at_1000": 0.9471288515406162,
+        "num_queries": 4998
+      },
+      "learned": {
+        "mrr_at_10": 0.4019942897794038,
+        "ndcg_at_10": 0.4638972432367261,
+        "recall_at_1000": 0.9471288515406162,
+        "num_queries": 4998
+      }
+    }
+  },
+  "overfitting_conclusion": "Stable initialization results and split checks do not rule out validation overfitting; held-out evaluation remains required"
+}
