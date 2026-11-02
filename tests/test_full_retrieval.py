@@ -44,6 +44,8 @@ class FullRetrievalTests(unittest.TestCase):
             self.assertEqual(scorer.search({99: 1})[0], [])
             self.assertEqual(scorer.search({})[0], [])
             np.testing.assert_array_equal(index.postings(0)[0], [0, 1, 3])
+            index.close()
+            self.assertTrue(index.docs._mmap.closed)
 
     def test_neural_full_retrieval_matches_candidate_scores_and_ties(self):
         with tempfile.TemporaryDirectory() as directory:

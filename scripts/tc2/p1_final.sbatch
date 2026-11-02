@@ -46,18 +46,18 @@ with tempfile.TemporaryDirectory(dir=Path(os.environ['P1_ROOT'])/'runs') as fold
     source=root/'passages'
     source.write_text(''.join(json.dumps({'docid':i,'ids':list(d),'weight':list(d.values())})+'\n' for i,d in enumerate(docs)))
     build(source,root/'index',2,2)
-    index=PostingIndex(root/'index')
-    query={0:.7,1:.2}
-    ranking,_=Retriever(index,device='cuda',chunk=1).search(query)
-    for docid,score in ranking:
-        assert math.isclose(score,bm25(query,docs[int(docid)],index.stats),abs_tol=1e-6)
-    model=ImpactScorer()
-    checkpoint=root/'model.pt'
-    torch.save({'format_version':2,'hidden':32,'state_dict':model.state_dict(),'stats':index.stats},checkpoint)
-    expected=score_group(model,{'query':query,'candidates':[{'concepts':d} for d in docs]},index.stats)
-    ranking,_=Retriever(index,checkpoint,'cuda',chunk=1).search(query)
-    for docid,score in ranking:
-        assert math.isclose(score,expected[int(docid)].item(),abs_tol=2e-5)
+    with PostingIndex(root/'index') as index:
+        query={0:.7,1:.2}
+        ranking,_=Retriever(index,device='cuda',chunk=1).search(query)
+        for docid,score in ranking:
+            assert math.isclose(score,bm25(query,docs[int(docid)],index.stats),abs_tol=1e-6)
+        model=ImpactScorer()
+        checkpoint=root/'model.pt'
+        torch.save({'format_version':2,'hidden':32,'state_dict':model.state_dict(),'stats':index.stats},checkpoint)
+        expected=score_group(model,{'query':query,'candidates':[{'concepts':d} for d in docs]},index.stats)
+        ranking,_=Retriever(index,checkpoint,'cuda',chunk=1).search(query)
+        for docid,score in ranking:
+            assert math.isclose(score,expected[int(docid)].item(),abs_tol=2e-5)
 print('GPU scoring parity checks passed',flush=True)
 PY
 PHASE=${P1_PHASE:-all}

@@ -113,6 +113,18 @@ class PostingIndex:
         start, end = self.offsets[concept:concept + 2]
         return self.docs[start:end], self.weights[start:end]
 
+    def close(self):
+        for array in (self.offsets, self.docs, self.weights, self.lengths):
+            mapping = getattr(array, '_mmap', None)
+            if mapping is not None and not mapping.closed:
+                mapping.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
