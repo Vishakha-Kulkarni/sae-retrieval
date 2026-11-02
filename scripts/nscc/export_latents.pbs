@@ -1,5 +1,5 @@
 #!/bin/bash
-# Export passage and MS MARCO dev-small query latents from an SAE checkpoint, in the upstream format.
+# Export passage, MS MARCO dev-small and TREC DL 19/20 query latents from an SAE checkpoint (upstream format).
 # qsub -P personal-riddhima -v CKPT_PATH=...,TAG=B0 scripts/nscc/export_latents.pbs
 #PBS -N p2_export
 #PBS -q normal
@@ -21,5 +21,10 @@ queries = json.load(open(f'{out}/dev_all.query.json'))
 json.dump({q: v for q, v in queries.items() if q in judged}, open(f'{out}/dev.query.json', 'w'))
 print('dev-small queries:', sum(q in judged for q in queries))
 EOF
+# TREC DL 2019/2020 queries (200 each; only judged ones are scored).
+for n in dl19 dl20; do
+    [ -e "$DATA/${n}_queries.npy" ] && python -m p2.evaluate export --checkpoint "$CKPT_PATH" \
+        --embeddings "$DATA/${n}_queries.npy" --output "$OUT/$n.query.json" --queries --device cuda
+done
 python -m p2.evaluate export --checkpoint "$CKPT_PATH" --embeddings "$DATA/passages.npy" \
     --output "$OUT/passages.latent.jsonl" --device cuda

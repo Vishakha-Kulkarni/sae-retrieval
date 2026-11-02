@@ -23,7 +23,7 @@ import torch
 from p1.metrics import read_qrels
 from .encode import default_device
 from .evaluate import candidate_metrics, encode, nmse
-from .losses import listwise_loss, naacl_loss, reconstruction_loss
+from .losses import bm25_scores, kl, listwise_loss, naacl_loss, reconstruction_loss
 from .sae import SAE, load_sae
 
 
@@ -50,15 +50,24 @@ def ranking_step(model, args, data, rng, device, scale):
         q = gather(queries, qrows, device)
         p = gather(data['passages'], pos[qrows], device)
         q_rep, p_rep = student(model, q, args, scale), student(model, p, args, scale)
-        return naacl_loss(q, p, q_rep, p_rep, args.temperature)
+        return naacl_loss(q, p, q_rep, p_rep, args.temperature, args.score_norm == 'zscore')
     qrows = rng.choice(len(queries), args.rank_batch, replace=False)
     cols = candidate_columns(rng, len(qrows), cands.shape[1], args.rank_cands, args.rank_head)
     prows = np.take_along_axis(cands[qrows], cols, 1)
     q = gather(queries, qrows, device)
     p = gather(data['passages'], prows.reshape(-1), device)
+    if args.rank_space == 'bm25':
+        # Student = the CL-SR scoring function itself, so what is learned is what CL-SR ranks with.
+        _, zq, _, _ = model(q, track_dead=False)
+        _, zp, _, _ = model(p, track_dead=False)
+        idf, avgdl = data['bm25']
+        teacher = torch.einsum('bd,bcd->bc', q, p.view(len(qrows), cols.shape[1], -1))
+        student_scores = bm25_scores(zq, zp.view(len(qrows), cols.shape[1], -1), idf, avgdl, scale)
+        return kl(teacher, student_scores, args.temperature, args.score_norm == 'zscore')
     q_rep = student(model, q, args, scale)
     p_rep = student(model, p, args, scale).view(len(qrows), cols.shape[1], -1)
-    return listwise_loss(q, p.view(len(qrows), cols.shape[1], -1), q_rep, p_rep, args.temperature)
+    return listwise_loss(q, p.view(len(qrows), cols.shape[1], -1), q_rep, p_rep, args.temperature,
+                         args.score_norm == 'zscore')
 
 
 def student(model, x, args, scale):
@@ -121,12 +130,15 @@ def main():
     parser.add_argument('--aux-alpha', type=float, default=1 / 32)
     parser.add_argument('--dead-threshold', type=int, default=20)
     parser.add_argument('--rank-loss', choices=['none', 'naacl', 'listwise'], default='listwise')
-    parser.add_argument('--rank-space', choices=['recon', 'latent'], default='recon')
+    parser.add_argument('--rank-space', choices=['recon', 'latent', 'bm25'], default='recon',
+                        help='bm25 = differentiable CL-SR scoring over concepts (needs --init)')
     parser.add_argument('--rank-weight', type=float, default=0.5, help='Sweep 0.1, 0.5, 1.0')
     parser.add_argument('--rank-batch', type=int, default=64, help='Queries per ranking step')
     parser.add_argument('--rank-cands', type=int, default=32, help='Candidates per query per step')
     parser.add_argument('--rank-head', type=int, default=8, help='Teacher top ranks always included')
     parser.add_argument('--temperature', type=float, default=1.)
+    parser.add_argument('--score-norm', choices=['zscore', 'none'], default='zscore',
+                        help='Standardise teacher and student scores per query before the KL (all ranking losses)')
     parser.add_argument('--eval-every', type=int, default=2000)
     parser.add_argument('--val-queries', type=int, default=1000, help='Validation subsample per eval (0 = all)')
     parser.add_argument('--nmse-sample', type=int, default=100_000)
@@ -159,6 +171,16 @@ def main():
         model = SAE(data['passages'].shape[1], args.hidden_mult, args.k, args.dead_threshold, args.decoder_norm)
         threshold = None
     model.to(device)
+    if args.rank_space == 'bm25':
+        if threshold is None or args.rank_loss != 'listwise':
+            parser.error('--rank-space bm25 needs --init (for its threshold) and --rank-loss listwise')
+        # IDF and mean length from the starting SAE's concepts on a passage sample, held fixed in training.
+        _, codes = encode(model, data['passages'][data['nmse_rows']], threshold, device=device)
+        codes = codes.coalesce()
+        n = codes.shape[0]
+        df = torch.bincount(codes.indices()[1], minlength=codes.shape[1]).float()
+        idf = torch.log((n - df + 0.5) / (df + 0.5)).to(device)
+        data['bm25'] = (idf, codes.indices().shape[1] / n)
     scale = torch.nn.Parameter(torch.zeros((), device=device))
     optimizer = torch.optim.AdamW(list(model.parameters()) + [scale], lr=args.lr, eps=6e-10)
     out = Path(args.output)

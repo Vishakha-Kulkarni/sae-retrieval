@@ -77,6 +77,36 @@ class P2Tests(unittest.TestCase):
         self.assertAlmostEqual(listwise_loss(q, p, q, p).item(), 0., places=5)
         self.assertAlmostEqual(naacl_loss(q, p[:, 0], q, p[:, 0]).item(), 0., places=5)
         self.assertGreater(listwise_loss(q, p, q, -p).item(), 0.)
+        # Standardised: a student that ranks identically at a different scale and offset costs nothing.
+        self.assertAlmostEqual(listwise_loss(q, p, q * 0.01, p, standardized=True).item(), 0., places=5)
+        self.assertGreater(listwise_loss(q, p, q * 0.01, p).item(), 0.01)
+
+    def test_differentiable_bm25_matches_clsr_scorer(self):
+        from scipy import sparse
+        from p2.clsr import passage_impacts, query_matrix
+        from p2.losses import bm25_scores
+        rng = np.random.default_rng(0)
+        zp = torch.tensor(rng.uniform(0, 3, (6, 40)) * (rng.random((6, 40)) < .3), dtype=torch.float32)
+        zq = torch.tensor(rng.uniform(0, 3, (1, 40)) * (rng.random((1, 40)) < .4), dtype=torch.float32)
+        impacts, df = passage_impacts(sparse.csr_matrix(zp.numpy()))
+        n = zp.shape[0]
+        idf = torch.tensor(np.log((n - df + 0.5) / (df + 0.5)), dtype=torch.float32)
+        avgdl = float((zp > 0).sum()) / n
+        queries = {'q': {'ids': [str(c) for c in np.flatnonzero(zq[0].numpy())],
+                         'weight': zq[0][zq[0] > 0].tolist()}}
+        _, qm = query_matrix(queries, 40, df)
+        expected = (qm @ impacts.T).toarray()[0]
+        ours = bm25_scores(zq, zp[None], idf, avgdl, torch.zeros(()))[0]
+        np.testing.assert_allclose(ours.numpy(), expected, rtol=1e-4, atol=1e-5)
+
+    def test_concept_comparison_bounds(self):
+        from p2.concepts import compare
+        z = torch.relu(torch.randn(300, 40)) * (torch.rand(300, 40) < .3)
+        same = compare(z, z, top_n=10, min_fires=10)
+        self.assertEqual(same['top_passage_jaccard_mean'], 1.0)
+        self.assertEqual(same['passage_concepts_retained_mean'], 1.0)
+        shuffled = compare(z, z[torch.randperm(300)], top_n=10, min_fires=10)
+        self.assertLess(shuffled['top_passage_jaccard_mean'], 0.5)
 
     def test_chunked_search_is_exact(self):
         rng = np.random.default_rng(0)
@@ -129,6 +159,13 @@ class P2Tests(unittest.TestCase):
                            cwd=ROOT, check=True, capture_output=True, text=True)
             steps = [json.loads(line)['step'] for line in (out / 'log.jsonl').read_text().splitlines()]
             self.assertEqual(steps, [0, 20, 40])
+            # Ranking in differentiable CL-SR (BM25) space, fine-tuned from the checkpoint above.
+            out_bm25 = root / 'finetune_bm25'
+            subprocess.run(base + ['--output', str(out_bm25), '--init', str(out / 'last.pt'),
+                                   '--rank-loss', 'listwise', '--rank-space', 'bm25'],
+                           cwd=ROOT, check=True, capture_output=True, text=True)
+            log = [json.loads(line) for line in (out_bm25 / 'log.jsonl').read_text().splitlines()]
+            self.assertTrue(all(np.isfinite(r['nmse']) for r in log))
             metrics = subprocess.run([sys.executable, '-m', 'p2.evaluate', 'metrics', '--checkpoint',
                                       str(out / 'best.pt'), '--data-dir', str(root), '--qrels',
                                       str(root / 'val.qrels'), '--nmse-sample', '600', '--device', 'cpu'],

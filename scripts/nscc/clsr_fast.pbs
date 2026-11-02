@@ -1,7 +1,7 @@
 #!/bin/bash
 # Released CL-SR scoring (vectorised p2.clsr, verified score-for-score against upstream latent_retrieve.py),
-# then upstream cl-sr/evaluate.py unchanged. Paper target (k=32): MRR@10 0.368 on MS MARCO dev-small.
-# qsub -P personal-riddhima -v TAG=B0 scripts/nscc/clsr_fast.pbs   (CHECK_RUN=<upstream run> to verify parity)
+# then upstream cl-sr/evaluate.py unchanged. Paper target (k=32, CL-SR Efficient): MRR@10 0.343 on dev-small.
+# qsub -P personal-riddhima -v TAG=B0[,SPLITS="dev dl19 dl20"] scripts/nscc/clsr_fast.pbs   (CHECK_RUN=<upstream run>: parity on dev)
 #PBS -N p2_clsrfast
 #PBS -q normal
 #PBS -l select=1:ncpus=8:mem=128gb
@@ -13,8 +13,14 @@ LAT="$HOME/scratch/sae/latents/$TAG"
 UP="$REPO/upstream/Decoding-Dense-Embeddings/cl-sr"
 MAXL=${MAX_LATENTS:-24}
 mkdir -p "$LAT/fast_max$MAXL"
-python -m p2.clsr --passage-latents "$LAT/passages.latent.jsonl" --query-latents "$LAT/dev.query.json" \
-    --output "$LAT/fast_max$MAXL/dev.tsv" --max-latents "$MAXL" ${CHECK_RUN:+--check-run "$CHECK_RUN"}
-ln -sf "$RAW/qrels.dev.small.tsv" "$LAT/dev_qrels.txt"
-cd "$LAT" && python "$UP/evaluate.py" --eval_data dev --result_path "$LAT/fast_max$MAXL/dev.tsv" \
-    | tee "$LAT/clsr_fast_max$MAXL.dev.metrics.txt"
+# SPLITS: any of dev (MS MARCO dev-small, MRR@10) dl19 dl20 (TREC DL, NDCG@10); default dev only.
+for split in ${SPLITS:-dev}; do
+    [ -e "$LAT/$split.query.json" ] || { echo "skip $split: no $LAT/$split.query.json"; continue; }
+    if [ "$split" = dev ]; then qrels="$RAW/qrels.dev.small.tsv"; else qrels="$DATA/$split.qrels"; fi
+    python -m p2.clsr --passage-latents "$LAT/passages.latent.jsonl" --query-latents "$LAT/$split.query.json" \
+        --output "$LAT/fast_max$MAXL/$split.tsv" --max-latents "$MAXL" \
+        ${CHECK_RUN:+$([ "$split" = dev ] && echo --check-run "$CHECK_RUN")}
+    ln -sf "$qrels" "$LAT/${split}_qrels.txt"   # upstream evaluate.py reads <eval_data>_qrels.txt
+    (cd "$LAT" && python "$UP/evaluate.py" --eval_data "$split" --result_path "$LAT/fast_max$MAXL/$split.tsv" \
+        | tee "$LAT/clsr_fast_max$MAXL.$split.metrics.txt")
+done
