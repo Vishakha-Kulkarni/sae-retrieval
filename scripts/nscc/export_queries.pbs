@@ -1,0 +1,16 @@
+#!/bin/bash
+# Export B0 concepts for one query set (CPU job, so it does not compete with GPU training).
+# qsub -P personal-riddhima -v SPLIT=train scripts/nscc/export_queries.pbs      (SPLIT: train|val|dev|dl19|dl20)
+#PBS -N p2_qexport
+#PBS -q normal
+#PBS -l select=1:ncpus=32:mem=64gb
+#PBS -l walltime=02:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+OUT=${OUT:-$HOME/scratch/sae/latents/final_atom}
+mkdir -p "$OUT"
+export OMP_NUM_THREADS=32
+python -m p2.evaluate export --checkpoint "$BASELINE" --embeddings "$DATA/${SPLIT}_queries.npy" \
+    --output "$OUT/$SPLIT.query.json" --queries --device cpu
+python -c "import json,sys; print(len(json.load(open(sys.argv[1]))), 'queries exported')" "$OUT/$SPLIT.query.json"

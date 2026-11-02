@@ -1,0 +1,13 @@
+#!/bin/bash
+# Concept stability of a fine-tuned SAE against B0 (p2.concepts). CPU job.
+# qsub -P personal-riddhima -v CKPT_PATH=... scripts/nscc/concepts.pbs
+#PBS -N p2_concepts
+#PBS -q normal
+#PBS -l select=1:ncpus=32:mem=64gb
+#PBS -l walltime=02:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+export OMP_NUM_THREADS=32
+python -m p2.concepts --reference "$BASELINE" --checkpoint "$CKPT_PATH" --passages "$DATA/passages.npy" \
+    --device cpu | tee "${CKPT_PATH%.pt}.concepts.json"

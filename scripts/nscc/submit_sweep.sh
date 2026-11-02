@@ -1,14 +1,16 @@
 #!/bin/bash
-# Submit the full P2 ablation: control, NAACL baseline, and ours (two score spaces x three weights).
-# PROJECT_ID=xxxx bash scripts/nscc/submit_sweep.sh
+# Final P2 ablation, all fine-tuned from the frozen B0 (env.sh BASELINE) with the same budget:
+# 20k steps, lr 1e-5, per-query standardised scores. best.pt in each run = best validation CL-SR
+# among checkpoints with NMSE <= 1.10 x B0.
+# PROJECT_ID=personal-riddhima bash scripts/nscc/submit_sweep.sh     (SEED=43 bash ... for extra seeds)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-submit() { qsub -P "$PROJECT_ID" -v "PROJECT_ID=$PROJECT_ID,NAME=$1,LOSS=$2,SPACE=$3,WEIGHT=$4,SEED=${SEED:-42}" \
-           -N "p2_$1" scripts/nscc/train.pbs; }
-# Control: same fine-tuning steps with reconstruction only, so gains are not just "trained longer".
-submit recon_only none recon 0
-for w in 0.1 0.5 1.0; do
-  submit naacl_w$w naacl recon $w
-  submit listwise_recon_w$w listwise recon $w
-  submit listwise_latent_w$w listwise latent $w
+COMMON="STEPS=${STEPS:-20000},LR=${LR:-1e-5},SEED=${SEED:-42}"
+submit() { qsub -P "$PROJECT_ID" -v "NAME=$1,LOSS=$2,SPACE=$3,WEIGHT=$4,$COMMON" -N "p2_$1" scripts/nscc/train.pbs; }
+submit B1_recon_only none recon 0         # control: same steps, reconstruction only
+submit naacl_w0.1 naacl recon 0.1          # Kang et al. NAACL 2025 objective
+submit listwise_recon_w0.1 listwise recon 0.1
+submit listwise_latent_w0.1 listwise latent 0.1
+for w in 0.05 0.1 0.2; do                  # ours: differentiable CL-SR (BM25) space
+  submit listwise_bm25_w$w listwise bm25 $w
 done

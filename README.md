@@ -10,10 +10,27 @@ Real-data training and full retrieval evaluation require the team's frozen artif
 
 ## P2: ranking-aware SAE training
 
-Fine-tunes the released SAE with one extra loss term that distils SimLM's ranking into the concepts,
-then evaluates the result with the unchanged upstream CL-SR. See `docs/P2_method_note.md` for the
-baseline rows and the improvement criterion. Entrypoints: `python -m p2.encode`, `p2.candidates`,
-`p2.train`, `p2.evaluate`; NSCC jobs are in `scripts/nscc/`. Tests: `python -m unittest tests/test_p2.py`.
+Fine-tunes the frozen baseline SAE (B0) with one extra loss term that distils SimLM's ranking into the
+concepts, then evaluates with the released CL-SR scoring. See `docs/P2_method_note.md` for the baseline
+rows and the improvement criterion. Tests: `python -m unittest tests/test_p2.py tests/test_clsr.py`.
+
+| Module | Purpose |
+|---|---|
+| `p2.encode`, `p2.candidates` | SimLM embeddings (SimLM's titled corpus) and exact dense top-100 candidates |
+| `p2.sae`, `p2.train` | BatchTopK SAE (upstream objective; `--decoder-norm atom` = the paper's per-feature norm) and ranking-aware fine-tuning (`--rank-space recon\|latent\|bm25`, `--rank-loss listwise\|naacl\|none`) |
+| `p2.clsr` | Released CL-SR BM25 scoring, vectorised; verified against upstream `latent_retrieve.py` |
+| `p2.evaluate` | NMSE, paper Table 1 protocol (`table1`), latent export in upstream format |
+| `p2.concepts` | Concept stability of a fine-tuned SAE against B0 |
+
+Run order on NSCC (all settings in `scripts/nscc/env.sh`):
+
+```bash
+qsub scripts/nscc/reencode_titled.pbs                 # embeddings + candidates (data_titled)
+qsub -v NAME=B0_final_atom,DECODER_NORM=atom scripts/nscc/baseline.pbs   # B0
+PROJECT_ID=... bash scripts/nscc/submit_sweep.sh      # B1 control, NAACL, ours (validation selection)
+bash scripts/nscc/evaluate_run.sh B0 $BASELINE        # dev + TREC DL: Table 1, CL-SR
+bash scripts/nscc/evaluate_run.sh listwise_bm25_w0.1_s42                 # same for a P2 run (+ concepts)
+```
 
 ## P3: adaptive passage sparsity
 
