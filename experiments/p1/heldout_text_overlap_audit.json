@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "judged_queries": 6980,
+    "texts_found": 6980,
+    "exact_text_overlapping_training_ids": [],
+    "normalized_text_overlapping_training_ids": []
+  },
+  "dl19": {
+    "judged_queries": 43,
+    "texts_found": 43,
+    "exact_text_overlapping_training_ids": [],
+    "normalized_text_overlapping_training_ids": []
+  },
+  "dl20": {
+    "judged_queries": 54,
+    "texts_found": 54,
+    "exact_text_overlapping_training_ids": [],
+    "normalized_text_overlapping_training_ids": []
+  }
+}
