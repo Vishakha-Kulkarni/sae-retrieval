@@ -38,13 +38,17 @@ def compare(z_ref, z_new, top_n=50, min_fires=None):
     for a, b in zip(top_ref.tolist(), top_new.tolist()):
         a, b = set(a), set(b)
         jaccard.append(len(a & b) / len(a | b))
-    retained = (active_ref & active_new).sum(1).float() / active_ref.sum(1).clamp(min=1).float()
+    reference_counts = active_ref.sum(1)
+    measurable = reference_counts > 0
+    retained = ((active_ref & active_new).sum(1)[measurable].float() /
+                reference_counts[measurable].float())
     jaccard = np.array(jaccard)
     return {'concepts_compared': int(len(keep)),
-            'top_passage_jaccard_mean': float(jaccard.mean()),
-            'top_passage_jaccard_median': float(np.median(jaccard)),
-            'share_concepts_jaccard_ge_0.5': float((jaccard >= 0.5).mean()),
-            'passage_concepts_retained_mean': float(retained.mean()),
+            'top_passage_jaccard_mean': float(jaccard.mean()) if len(jaccard) else None,
+            'top_passage_jaccard_median': float(np.median(jaccard)) if len(jaccard) else None,
+            'share_concepts_jaccard_ge_0.5': float((jaccard >= 0.5).mean()) if len(jaccard) else None,
+            'passage_concepts_retained_mean': float(retained.mean()) if retained.numel() else None,
+            'passages_with_reference_concepts': int(measurable.sum()),
             'active_per_passage_ref': float(active_ref.sum(1).float().mean()),
             'active_per_passage_new': float(active_new.sum(1).float().mean())}
 

@@ -43,9 +43,11 @@ class HandoffTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'sae.pt'
             model = SAE(input_dim=4, hidden_mult=2, k=1)
-            torch.save({'state_dict': model.state_dict(), 'meta': {'threshold': .25, 'k': 1}}, path)
+            torch.save({'state_dict': model.state_dict(), 'meta': {
+                'threshold': .25, 'k': 1, 'args': {'decoder_norm': 'atom'}}}, path)
             loaded, threshold = load_baseline(path)
             self.assertEqual(threshold, .25)
+            self.assertEqual(loaded.decoder_norm, 'atom')
             self.assertTrue(torch.equal(loaded.linear.weight, model.linear.weight))
             torch.save(model.upstream_state_dict(), path)
             with self.assertRaisesRegex(ValueError, 'do not reuse'):
@@ -72,7 +74,7 @@ class HandoffTest(unittest.TestCase):
                                      '--output-dir', str(root / 'exports'), '--batch-size', '2'],
                                     check=True, capture_output=True, text=True)
             self.assertEqual(json.loads(result.stdout)['threshold'], .25)
-            self.assertEqual(json.loads((root / 'exports/validation.query.json').read_text())['validation']['ids'], [0])
+            self.assertEqual(json.loads((root / 'exports/validation.query.json').read_text())['validation']['ids'], ['0'])
             self.assertIn('validation Q0 0 1 2', (root / 'exports/validation.run').read_text())
             rows = (root / 'exports/passages.latent.jsonl').read_text().splitlines()
             self.assertEqual(len(rows), 3)

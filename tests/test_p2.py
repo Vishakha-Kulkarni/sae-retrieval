@@ -108,6 +108,17 @@ class P2Tests(unittest.TestCase):
         shuffled = compare(z, z[torch.randperm(300)], top_n=10, min_fires=10)
         self.assertLess(shuffled['top_passage_jaccard_mean'], 0.5)
 
+    def test_concept_retention_excludes_empty_reference_passages(self):
+        from p2.concepts import compare
+        reference = torch.tensor([[1., 0.], [0., 0.], [1., 1.]])
+        changed = torch.tensor([[1., 0.], [1., 0.], [0., 1.]])
+        result = compare(reference, changed, top_n=1)
+        self.assertEqual(result['passages_with_reference_concepts'], 2)
+        self.assertEqual(result['passage_concepts_retained_mean'], .75)
+        empty = compare(torch.zeros(3, 2), torch.zeros(3, 2), top_n=1)
+        self.assertIsNone(empty['passage_concepts_retained_mean'])
+        self.assertIsNone(empty['top_passage_jaccard_mean'])
+
     def test_chunked_search_is_exact(self):
         rng = np.random.default_rng(0)
         p, q = rng.normal(size=(300, 8)).astype(np.float32), rng.normal(size=(7, 8)).astype(np.float32)
