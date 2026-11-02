@@ -68,7 +68,8 @@ def load_baseline(path, threshold=None):
     weight = state['linear.weight']
     if weight.ndim != 2 or weight.shape[0] % weight.shape[1]:
         raise ValueError('Unsupported SAE encoder dimensions')
-    model = SAE(weight.shape[1], weight.shape[0] // weight.shape[1], meta.get('k', 32))
+    model = SAE(weight.shape[1], weight.shape[0] // weight.shape[1], meta.get('k', 32),
+                decoder_norm=meta.get('args', {}).get('decoder_norm', 'row'))
     missing, unexpected = model.load_state_dict(state, strict=False)
     if set(missing) - {'steps_since_active'} or unexpected:
         raise ValueError(f'Incompatible SAE checkpoint: missing={missing}, unexpected={unexpected}')
