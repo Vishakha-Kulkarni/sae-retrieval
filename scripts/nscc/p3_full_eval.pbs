@@ -1,0 +1,50 @@
+#!/bin/bash
+# Full-corpus validation comparison: released fixed k=32 vs the screened P3 setting.
+# Copy the checkpoint and DATA artifacts to NSCC scratch, then submit with:
+#   qsub -P personal-riddhima -v REPO=...,DATA=...,SAE=... scripts/nscc/p3_full_eval.pbs
+# DATA must contain passages.npy, validation_queries.npy/.ids, and qrels.train.tsv.
+# The upstream Python-object index is memory intensive; request the 110 GB node.
+#PBS -N p3_full_eval
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+
+SAE=${SAE:-$DATA/B0_titled_200k.pt}
+P3_OUT=${P3_OUT:-$DATA/p3_full_eval}
+TAU=${TAU:-3.5}
+MIN_CONCEPTS=${MIN_CONCEPTS:-8}
+MAX_CONCEPTS=${MAX_CONCEPTS:-32}
+BATCH_SIZE=${BATCH_SIZE:-1024}
+
+for path in "$SAE" "$DATA/passages.npy" "$DATA/validation_queries.npy" \
+            "$DATA/validation_queries.ids" "$DATA/qrels.train.tsv"; do
+    test -f "$path" || { echo "Missing required input: $path" >&2; exit 2; }
+done
+
+mkdir -p "$P3_OUT" "$P3_OUT/tmp"
+export TMPDIR="$P3_OUT/tmp"
+
+# Query encoding is frozen at the checkpoint's stored threshold for both rows.
+python -m p2.evaluate export --checkpoint "$SAE" \
+    --embeddings "$DATA/validation_queries.npy" \
+    --output "$P3_OUT/validation.query.json" --queries
+
+python -m p3.extract_passage_latents --checkpoint "$SAE" \
+    --input-embeddings "$DATA/passages.npy" \
+    --output "$P3_OUT/fixed32.passages.jsonl" --mode fixed --k 32 \
+    --batch-size "$BATCH_SIZE" --device cuda:0
+python -m p3.evaluate_index --passage-latents "$P3_OUT/fixed32.passages.jsonl" \
+    --query-latents "$P3_OUT/validation.query.json" --qrels "$DATA/qrels.train.tsv" \
+    --output "$P3_OUT/fixed32.validation.json"
+
+python -m p3.extract_passage_latents --checkpoint "$SAE" \
+    --input-embeddings "$DATA/passages.npy" \
+    --output "$P3_OUT/adaptive.passages.jsonl" --mode adaptive \
+    --threshold "$TAU" --min-concepts "$MIN_CONCEPTS" --max-concepts "$MAX_CONCEPTS" \
+    --batch-size "$BATCH_SIZE" --device cuda:0
+python -m p3.evaluate_index --passage-latents "$P3_OUT/adaptive.passages.jsonl" \
+    --query-latents "$P3_OUT/validation.query.json" --qrels "$DATA/qrels.train.tsv" \
+    --output "$P3_OUT/adaptive.validation.json"
