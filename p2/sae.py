@@ -8,8 +8,13 @@ from torch import nn
 
 
 class SAE(nn.Module):
-    def __init__(self, input_dim=768, hidden_mult=32, k=32, dead_threshold=20):
+    def __init__(self, input_dim=768, hidden_mult=32, k=32, dead_threshold=20, decoder_norm='row'):
         super().__init__()
+        if decoder_norm not in ('row', 'atom'):
+            raise ValueError('decoder_norm must be row or atom')
+        # 'row': upstream sae/train.py normalises linear2.weight along dim=-1 (each of the 768 output rows).
+        # 'atom': the paper's description, unit norm per latent's decoder vector (dim=0).
+        self.decoder_norm = decoder_norm
         sparse_dim = input_dim * hidden_mult
         self.linear = nn.Linear(input_dim, sparse_dim, bias=False)
         self.linear2 = nn.Linear(sparse_dim, input_dim, bias=False)
@@ -56,15 +61,16 @@ class SAE(nn.Module):
 
     @torch.no_grad()
     def make_decoder_weights_norm(self):
-        # Upstream normalises along dim=-1 (rows of the 768 x sparse matrix); kept for checkpoint parity.
-        self.linear2.weight.data /= self.linear2.weight.norm(dim=-1, keepdim=True)
+        dim = -1 if self.decoder_norm == 'row' else 0
+        self.linear2.weight.data /= self.linear2.weight.norm(dim=dim, keepdim=True)
 
     @torch.no_grad()
     def project_decoder_grad(self):
-        """Remove the gradient component parallel to the unit-norm decoder rows (upstream convention)."""
+        """Remove the gradient component parallel to the unit-norm decoder vectors."""
         w, g = self.linear2.weight, self.linear2.weight.grad
         if g is not None:
-            g -= (g * w).sum(-1, keepdim=True) * w
+            dim = -1 if self.decoder_norm == 'row' else 0
+            g -= (g * w).sum(dim, keepdim=True) * w
 
     def upstream_state_dict(self):
         return {k: v for k, v in self.state_dict().items() if k != 'steps_since_active'}
@@ -76,6 +82,7 @@ def load_sae(path, k=32, map_location='cpu'):
     state = payload.get('state_dict', payload)
     meta = payload.get('meta', {})
     input_dim, sparse_dim = state['linear.weight'].shape[1], state['linear.weight'].shape[0]
-    model = SAE(input_dim, sparse_dim // input_dim, meta.get('k', k))
+    model = SAE(input_dim, sparse_dim // input_dim, meta.get('k', k),
+                decoder_norm=meta.get('args', {}).get('decoder_norm', 'row'))
     model.load_state_dict({k: v for k, v in state.items() if k != 'steps_since_active'}, strict=False)
     return model, meta

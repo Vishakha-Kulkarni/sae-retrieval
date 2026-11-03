@@ -56,7 +56,14 @@ def encode_adaptive_batch(
     if max_concepts > latent_dim:
         raise ValueError(f"max_concepts ({max_concepts}) exceeds latent dimension ({latent_dim})")
 
-    values, ids = torch.topk(activations, k=max_concepts, dim=1, largest=True, sorted=True)
+    if embeddings.shape[0] == 0:
+        reconstruction = model.linear2(activations) + model.bias_pre if return_reconstruction else None
+        return [], reconstruction
+
+    # Negative SAE values are not concepts. Mask them before thresholding so a
+    # negative threshold can never cause negative weights to enter the index.
+    positive_activations = activations.clamp_min(0)
+    values, ids = torch.topk(positive_activations, k=max_concepts, dim=1, largest=True, sorted=True)
     keep = values > threshold
     counts = keep.sum(dim=1)
     if min_concepts:

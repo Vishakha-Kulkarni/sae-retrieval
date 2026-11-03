@@ -3,10 +3,12 @@
 python -m p2.encode passages --input collection.tsv --output passages.npy
 python -m p2.encode queries  --input queries.train.tsv --output train_queries.npy
 Matches upstream SimLM inference: CLS pooling, no L2 norm, q_max_len 32, p_max_len 144,
-passages encoded as the (title, contents) pair with title '-' when missing.
+passages encoded as the (title, contents) pair exactly as SimLM's encode_main.py (truncation=True).
+Use SimLM's titled corpus (intfloat/simlm-msmarco, msmarco_bm25_official/passages.jsonl.gz) to match the paper.
 """
 import argparse
 import gzip
+import json
 from pathlib import Path
 
 import numpy as np
@@ -16,12 +18,20 @@ MODEL = 'intfloat/simlm-base-msmarco-finetuned'
 
 
 def read_tsv(path, limit=None):
+    """TSV (id, [title,] text), or SimLM's passages.jsonl[.gz] ({id, title, contents}) as upstream
+    run.sh encodes; the latter carries the passage titles behind SimLM's reported 0.411 MRR@10."""
     opener = gzip.open if str(path).endswith('.gz') else open
+    is_jsonl = '.jsonl' in Path(path).name
     ids, texts = [], []
     with opener(path, 'rt') as source:
         for line in source:
             if limit is not None and len(ids) >= limit:
                 break
+            if is_jsonl:
+                record = json.loads(line)
+                ids.append(str(record['id']))
+                texts.append([record.get('title', ''), record['contents']])
+                continue
             parts = line.rstrip('\n').split('\t')
             ids.append(parts[0])
             texts.append(parts[1:])
@@ -46,9 +56,10 @@ def encode(texts, kind, output, batch_size=256, device=None, model_name=MODEL):
     for start in range(0, len(texts), batch_size):
         chunk = texts[start:start + batch_size]
         if kind == 'passages':
-            titles = [t[0] if len(t) > 1 and t[0] else '-' for t in chunk]
+            # Title verbatim when the input has one (SimLM's corpus); '-' for title-less collection.tsv.
+            titles = [t[0] if len(t) > 1 else '-' for t in chunk]
             bodies = [t[-1] for t in chunk]
-            batch = tokenizer(titles, bodies, max_length=144, truncation='only_second',
+            batch = tokenizer(titles, bodies, max_length=144, truncation=True,
                               padding=True, return_tensors='pt')
         else:
             batch = tokenizer([t[0] for t in chunk], max_length=32, truncation=True,

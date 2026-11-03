@@ -1,3 +1,5 @@
 torch>=2.2,<3
 numpy>=1.24
+ijson>=3.3,<4
 transformers>=4.40,<4.50  # 5.x needs torch>=2.6
+scipy>=1.10

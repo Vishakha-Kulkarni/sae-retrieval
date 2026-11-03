@@ -4,35 +4,57 @@ import math
 
 
 def load_groups(path, require_teacher=False):
-    groups = []
-    seen = set()
-    with open(path) as source:
-        for line_number, line in enumerate(source, 1):
-            if not line.strip():
-                continue
-            group = json.loads(line)
-            qid = str(group['qid'])
-            if qid in seen:
-                raise ValueError(f'{path}:{line_number}: duplicate qid {qid}')
-            seen.add(qid)
-            group['qid'] = qid
-            group['query'] = sparse(group['query'])
-            if not group['candidates']:
-                raise ValueError(f'{qid}: empty candidate list')
-            docids = set()
-            for doc in group['candidates']:
-                doc['docid'] = str(doc['docid'])
-                if doc['docid'] in docids:
-                    raise ValueError(f'{qid}: duplicate docid {doc["docid"]}')
-                docids.add(doc['docid'])
-                doc['concepts'] = sparse(doc['concepts'])
-                if require_teacher or 'teacher_score' in doc:
-                    if not math.isfinite(float(doc['teacher_score'])):
-                        raise ValueError(f'{qid}: nonfinite teacher score')
-            groups.append(group)
-    if not groups:
-        raise ValueError(f'{path}: empty dataset')
-    return groups
+    return list(IndexedGroups(path, require_teacher))
+
+
+def validate_group(group, require_teacher=False):
+    group['qid'] = str(group['qid'])
+    group['query'] = sparse(group['query'])
+    if not group['candidates']:
+        raise ValueError(f'{group["qid"]}: empty candidate list')
+    docids = set()
+    for doc in group['candidates']:
+        doc['docid'] = str(doc['docid'])
+        if doc['docid'] in docids:
+            raise ValueError(f'{group["qid"]}: duplicate docid {doc["docid"]}')
+        docids.add(doc['docid'])
+        doc['concepts'] = sparse(doc['concepts'])
+        if require_teacher or 'teacher_score' in doc:
+            if not math.isfinite(float(doc['teacher_score'])):
+                raise ValueError(f'{group["qid"]}: nonfinite teacher score')
+    return group
+
+
+class IndexedGroups:
+    """Store query byte offsets rather than all candidate activations in memory."""
+    def __init__(self, path, require_teacher=False):
+        self.path, self.require_teacher = path, require_teacher
+        self.offsets, self.qids = [], set()
+        with open(path, 'rb') as source:
+            while True:
+                offset = source.tell()
+                line = source.readline()
+                if not line:
+                    break
+                if not line.strip():
+                    continue
+                group = validate_group(json.loads(line), require_teacher)
+                qid = group['qid']
+                if qid in self.qids:
+                    raise ValueError(f'{path}: duplicate qid {qid}')
+                self.qids.add(qid)
+                self.offsets.append(offset)
+        if not self.offsets:
+            raise ValueError(f'{path}: empty dataset')
+
+    def __len__(self):
+        return len(self.offsets)
+
+    def __getitem__(self, index):
+        offset = self.offsets[index]
+        with open(self.path, 'rb') as source:
+            source.seek(offset)
+            return validate_group(json.loads(source.readline()), self.require_teacher)
 
 
 def sparse(values):

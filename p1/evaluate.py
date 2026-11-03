@@ -1,6 +1,6 @@
 import argparse
 import json
-from .data import bm25, load_groups, load_stats
+from .data import bm25, IndexedGroups, load_stats
 from .metrics import evaluate, read_qrels
 
 
@@ -20,8 +20,8 @@ def main():
         p.error('Require k1 > 0, k2 > 0 and b >= 0')
     if args.tune and args.checkpoint:
         p.error('--tune only applies to BM25')
-    groups, stats, qrels = load_groups(args.data), load_stats(args.stats), read_qrels(args.qrels)
-    if set(qrels) != {g['qid'] for g in groups}:
+    groups, stats, qrels = IndexedGroups(args.data), load_stats(args.stats), read_qrels(args.qrels)
+    if set(qrels) != groups.qids:
         raise ValueError('Candidate and qrels query IDs must match; supply the intended evaluation subset')
     if args.checkpoint:
         import torch

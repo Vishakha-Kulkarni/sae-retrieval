@@ -1,0 +1,162 @@
+{
+  "date": "2026-11-02",
+  "job_id": "50216",
+  "job_state": "COMPLETED",
+  "exit_code": "0:0",
+  "runtime": "00:25:42",
+  "gpu": "NVIDIA A40",
+  "source_commit": "8d1ebce52dbe0fadbf665abbecbd63385a20c543",
+  "hf_revision": "44922d806ec03f5e853ad507aa619b51a8d10f4a",
+  "scope": "Dense top-100 reranking pilot; not full-corpus retrieval or final evaluation",
+  "checkpoint_sha256": "d38eb57d818ad3831d612c33f9d19950ebe90db477032caf588a8b62aedfbacc",
+  "threshold": 0.49722998729348183,
+  "seed": 42,
+  "train_queries": 5000,
+  "validation_queries": 5000,
+  "corpus_passages": 8841823,
+  "max_concepts": 24,
+  "input_sha256": {
+    "passages.latent.jsonl": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+    "train.query.json": "804eab6f90211c4ac67d1941589a1cbfaf5613e61a724b204cd4d33bca480b23",
+    "train.cands.npy": "6b0da77b7ba0a98c1264da0e8cf90ae71ae2fe2d068ee866214988e22b19c815",
+    "train.teacher.npy": "55817773578c2495e99cda2fb3d9ddd6226ff2e229dcad11885125f0d6688723"
+  },
+  "epochs": 10,
+  "best_epoch": 7,
+  "metrics": {
+    "released_bm25": {
+      "method": "released_bm25",
+      "k2": 1.5,
+      "k1": 0.6,
+      "b": 2.0,
+      "mrr_at_10": 0.3423304761904745,
+      "ndcg_at_10": 0.40632425959189666,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    "tuned_bm25": {
+      "method": "released_bm25",
+      "k2": 1.5,
+      "k1": 1.2,
+      "b": 1.0,
+      "mrr_at_10": 0.34977412698412536,
+      "ndcg_at_10": 0.4137059463966537,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    "learned": {
+      "method": "learned",
+      "k2": null,
+      "k1": null,
+      "b": null,
+      "mrr_at_10": 0.40196682539682377,
+      "ndcg_at_10": 0.4639091117275679,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    }
+  },
+  "training": [
+    {
+      "epoch": 1,
+      "loss": 1.5023964082747767,
+      "mrr_at_10": 0.3928785714285696,
+      "ndcg_at_10": 0.45527506618474506,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 2,
+      "loss": 1.2054780855139677,
+      "mrr_at_10": 0.39761920634920467,
+      "ndcg_at_10": 0.46005457212727363,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 3,
+      "loss": 1.1610355913104402,
+      "mrr_at_10": 0.39990309523809353,
+      "ndcg_at_10": 0.46264369160081814,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 4,
+      "loss": 1.149344307580077,
+      "mrr_at_10": 0.39528809523809366,
+      "ndcg_at_10": 0.4576289150958118,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 5,
+      "loss": 1.1377538616135612,
+      "mrr_at_10": 0.39767920634920456,
+      "ndcg_at_10": 0.45981406841388334,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 6,
+      "loss": 1.1334153020777096,
+      "mrr_at_10": 0.39754801587301425,
+      "ndcg_at_10": 0.4601036618144143,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 7,
+      "loss": 1.1298052284108357,
+      "mrr_at_10": 0.40196682539682377,
+      "ndcg_at_10": 0.4639091117275679,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 8,
+      "loss": 1.1261249157402777,
+      "mrr_at_10": 0.4009057142857126,
+      "ndcg_at_10": 0.463708929165335,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 9,
+      "loss": 1.1277594310951442,
+      "mrr_at_10": 0.399455317460316,
+      "ndcg_at_10": 0.4614202590934524,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    },
+    {
+      "epoch": 10,
+      "loss": 1.1247269261282513,
+      "mrr_at_10": 0.3983607936507918,
+      "ndcg_at_10": 0.46136177772057035,
+      "recall_at_1000": 0.94715,
+      "num_queries": 5000
+    }
+  ],
+  "verification": {
+    "metrics_recomputed_from_exported_runs": true,
+    "identical_candidates_across_methods": true,
+    "shared_full_validation_split": true,
+    "disjoint_train_validation": true,
+    "checkpoint_matches_best_epoch": true
+  },
+  "limitations": [
+    "Dense top-100 reranking, not full-corpus sparse retrieval",
+    "One seed; 5000 training queries sampled from the shared training split",
+    "Model selection and BM25 tuning use validation; no independent held-out result",
+    "Recall@1000 is restricted to the 100 supplied candidates",
+    "No significance, index-size, or retrieval-latency result yet"
+  ],
+  "artifact_sha256": {
+    "model.pt": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf",
+    "train.qids": "75fabf6658b399dc7b4dda66a56ec6200415db777fe2a6699a333f40fb65fd6c",
+    "validation.qids": "a5cbb45353af45c63f89e0a98812e1c845e7362036e519278ef41fbf268b0bf1",
+    "released_bm25.run": "f1402caf3f905b0046b76c7d8b008cd18dd555a29f6c6814ab3a35dfe9b9475f",
+    "tuned_bm25.run": "0ce1cdfd1d6f4262932ee5c10b6c90596eb4adecb4ffafe556c248c20cb10647",
+    "learned.run": "1919aaccdf99f05e403f18f527bd96ea927bb31d281e9b015ee552b4c49fc0a8"
+  }
+}

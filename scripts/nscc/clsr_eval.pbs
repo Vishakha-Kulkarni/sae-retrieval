@@ -1,0 +1,25 @@
+#!/bin/bash
+# Released CL-SR, unchanged: upstream indexing.py -> latent_retrieve.py -> evaluate.py on MS MARCO dev-small.
+# Paper target (k=32): MRR@10 0.368. Run after export_latents.pbs for the same TAG.
+# qsub -P personal-riddhima -v TAG=B0 scripts/nscc/clsr_eval.pbs
+#PBS -N p2_clsr
+#PBS -q normal
+#PBS -l select=1:ncpus=4:mem=220gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+pip show pytrec_eval >/dev/null
+LAT="$HOME/scratch/sae/latents/$TAG"
+UP="$REPO/upstream/Decoding-Dense-Embeddings/cl-sr"
+MAXL=${MAX_LATENTS:-24}     # upstream README setting
+/usr/bin/time -v python "$UP/indexing.py" --passage_latents "$LAT/passages.latent.jsonl" \
+    --index_save_path "$LAT/index_max$MAXL.pkl" --max_latents "$MAXL" 2> "$LAT/index_time.txt"
+ls -l "$LAT/index_max$MAXL.pkl"
+/usr/bin/time -v python "$UP/latent_retrieve.py" --index_path "$LAT/index_max$MAXL.pkl" \
+    --query_latents_path "$LAT/dev.query.json" --output_path "$LAT/run_max$MAXL/dev.tsv" \
+    --split dev 2> "$LAT/retrieve_time.txt"
+# upstream evaluate.py reads <eval_data>_qrels.txt
+ln -sf "$RAW/qrels.dev.small.tsv" "$LAT/dev_qrels.txt"
+cd "$LAT" && python "$UP/evaluate.py" --eval_data dev --result_path "$LAT/run_max$MAXL/dev.tsv" \
+    | tee "$LAT/clsr_max$MAXL.dev.metrics.txt"
