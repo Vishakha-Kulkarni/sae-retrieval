@@ -1,0 +1,1185 @@
+{
+  "date": "2026-11-03",
+  "scope": "Locked full-corpus held-out retrieval over 8,841,823 passages; no dense candidate filtering at inference",
+  "source_commit": "6636f917def64824736d85606e6780724dba00bf",
+  "jobs": {
+    "validation": {
+      "id": "50421",
+      "state": "COMPLETED",
+      "elapsed": "01:35:36",
+      "exit_code": "0:0"
+    },
+    "heldout": {
+      "id": "50422",
+      "state": "COMPLETED",
+      "elapsed": "01:39:27",
+      "exit_code": "0:0"
+    }
+  },
+  "frozen_protocol": {
+    "format_version": 1,
+    "primary_seed": "42",
+    "selection_scope": "28-setting BM25 grid on 500 validation queries, then top 3 plus released and prior candidate-tuned settings confirmed on all 5000; neural checkpoints selected on validation only",
+    "trials": [
+      {
+        "k1": 0.3,
+        "b": 0.0,
+        "mrr_at_10": 0.29408888888888884
+      },
+      {
+        "k1": 0.3,
+        "b": 0.25,
+        "mrr_at_10": 0.29344682539682543
+      },
+      {
+        "k1": 0.3,
+        "b": 0.5,
+        "mrr_at_10": 0.29318571428571427
+      },
+      {
+        "k1": 0.3,
+        "b": 0.75,
+        "mrr_at_10": 0.295052380952381
+      },
+      {
+        "k1": 0.3,
+        "b": 1.0,
+        "mrr_at_10": 0.29445238095238097
+      },
+      {
+        "k1": 0.3,
+        "b": 1.5,
+        "mrr_at_10": 0.2948960317460318
+      },
+      {
+        "k1": 0.3,
+        "b": 2.0,
+        "mrr_at_10": 0.29509920634920644
+      },
+      {
+        "k1": 0.6,
+        "b": 0.0,
+        "mrr_at_10": 0.31060873015873003
+      },
+      {
+        "k1": 0.6,
+        "b": 0.25,
+        "mrr_at_10": 0.30999761904761897
+      },
+      {
+        "k1": 0.6,
+        "b": 0.5,
+        "mrr_at_10": 0.3087642857142856
+      },
+      {
+        "k1": 0.6,
+        "b": 0.75,
+        "mrr_at_10": 0.3092698412698412
+      },
+      {
+        "k1": 0.6,
+        "b": 1.0,
+        "mrr_at_10": 0.3093253968253967
+      },
+      {
+        "k1": 0.6,
+        "b": 1.5,
+        "mrr_at_10": 0.3098809523809523
+      },
+      {
+        "k1": 0.6,
+        "b": 2.0,
+        "mrr_at_10": 0.31021111111111105
+      },
+      {
+        "k1": 1.2,
+        "b": 0.0,
+        "mrr_at_10": 0.3143714285714286
+      },
+      {
+        "k1": 1.2,
+        "b": 0.25,
+        "mrr_at_10": 0.31420476190476193
+      },
+      {
+        "k1": 1.2,
+        "b": 0.5,
+        "mrr_at_10": 0.3140158730158731
+      },
+      {
+        "k1": 1.2,
+        "b": 0.75,
+        "mrr_at_10": 0.31439365079365084
+      },
+      {
+        "k1": 1.2,
+        "b": 1.0,
+        "mrr_at_10": 0.31246031746031755
+      },
+      {
+        "k1": 1.2,
+        "b": 1.5,
+        "mrr_at_10": 0.3132595238095239
+      },
+      {
+        "k1": 1.2,
+        "b": 2.0,
+        "mrr_at_10": 0.28953809523809526
+      },
+      {
+        "k1": 2.4,
+        "b": 0.0,
+        "mrr_at_10": 0.29705396825396835
+      },
+      {
+        "k1": 2.4,
+        "b": 0.25,
+        "mrr_at_10": 0.29890952380952374
+      },
+      {
+        "k1": 2.4,
+        "b": 0.5,
+        "mrr_at_10": 0.2990777777777777
+      },
+      {
+        "k1": 2.4,
+        "b": 0.75,
+        "mrr_at_10": 0.3003166666666667
+      },
+      {
+        "k1": 2.4,
+        "b": 1.0,
+        "mrr_at_10": 0.29988888888888887
+      },
+      {
+        "k1": 2.4,
+        "b": 1.5,
+        "mrr_at_10": 0.2984674603174603
+      },
+      {
+        "k1": 2.4,
+        "b": 2.0,
+        "mrr_at_10": 0.10589761904761918
+      }
+    ],
+    "full_validation_confirmation": [
+      {
+        "k1": 1.2,
+        "b": 0.75,
+        "prefix": "/home/msai/vishakha001/sae-retrieval-p1/runs/full-corpus-j50421/selection/confirm-0",
+        "metrics": {
+          "method": "bm25",
+          "device": "cuda",
+          "scope": "Full-corpus concept retrieval",
+          "ndcg_gain": "linear",
+          "gpu_name": "NVIDIA A40",
+          "sample_limit": null,
+          "sample_seed": null,
+          "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+          "index_bytes": 1688270708,
+          "checkpoint_bytes": 0,
+          "checkpoint_sha256": null,
+          "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+          "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+          "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+          "tie_break": "ascending numeric passage ID",
+          "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+          "peak_cuda_bytes": 244655616,
+          "avg_concepts_per_passage": 23.609834985387064,
+          "mean_latency_ms": 119.04973264955771,
+          "p95_latency_ms": 138.24943799627366,
+          "mean_postings_touched": 21363113.1474,
+          "k1": 1.2,
+          "b": 0.75,
+          "k2": 1.5,
+          "mrr_at_10": 0.33964611111110987,
+          "ndcg_at_10": 0.39910593259848987,
+          "recall_at_1000": 0.9586000000000002,
+          "num_queries": 5000
+        }
+      },
+      {
+        "k1": 1.2,
+        "b": 0.0,
+        "prefix": "/home/msai/vishakha001/sae-retrieval-p1/runs/full-corpus-j50421/selection/confirm-1",
+        "metrics": {
+          "method": "bm25",
+          "device": "cuda",
+          "scope": "Full-corpus concept retrieval",
+          "ndcg_gain": "linear",
+          "gpu_name": "NVIDIA A40",
+          "sample_limit": null,
+          "sample_seed": null,
+          "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+          "index_bytes": 1688270708,
+          "checkpoint_bytes": 0,
+          "checkpoint_sha256": null,
+          "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+          "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+          "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+          "tie_break": "ascending numeric passage ID",
+          "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+          "peak_cuda_bytes": 244655616,
+          "avg_concepts_per_passage": 23.609834985387064,
+          "mean_latency_ms": 118.98924960939621,
+          "p95_latency_ms": 138.27712714701192,
+          "mean_postings_touched": 21363113.1474,
+          "k1": 1.2,
+          "b": 0.0,
+          "k2": 1.5,
+          "mrr_at_10": 0.33925936507936383,
+          "ndcg_at_10": 0.3989173606760542,
+          "recall_at_1000": 0.9580333333333334,
+          "num_queries": 5000
+        }
+      },
+      {
+        "k1": 1.2,
+        "b": 0.25,
+        "prefix": "/home/msai/vishakha001/sae-retrieval-p1/runs/full-corpus-j50421/selection/confirm-2",
+        "metrics": {
+          "method": "bm25",
+          "device": "cuda",
+          "scope": "Full-corpus concept retrieval",
+          "ndcg_gain": "linear",
+          "gpu_name": "NVIDIA A40",
+          "sample_limit": null,
+          "sample_seed": null,
+          "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+          "index_bytes": 1688270708,
+          "checkpoint_bytes": 0,
+          "checkpoint_sha256": null,
+          "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+          "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+          "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+          "tie_break": "ascending numeric passage ID",
+          "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+          "peak_cuda_bytes": 244655616,
+          "avg_concepts_per_passage": 23.609834985387064,
+          "mean_latency_ms": 118.7477175732274,
+          "p95_latency_ms": 137.8197227484634,
+          "mean_postings_touched": 21363113.1474,
+          "k1": 1.2,
+          "b": 0.25,
+          "k2": 1.5,
+          "mrr_at_10": 0.33955071428571304,
+          "ndcg_at_10": 0.3990928860858383,
+          "recall_at_1000": 0.9581000000000002,
+          "num_queries": 5000
+        }
+      },
+      {
+        "k1": 0.6,
+        "b": 2.0,
+        "prefix": "/home/msai/vishakha001/sae-retrieval-p1/runs/full-corpus-j50421/selection/confirm-3",
+        "metrics": {
+          "method": "bm25",
+          "device": "cuda",
+          "scope": "Full-corpus concept retrieval",
+          "ndcg_gain": "linear",
+          "gpu_name": "NVIDIA A40",
+          "sample_limit": null,
+          "sample_seed": null,
+          "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+          "index_bytes": 1688270708,
+          "checkpoint_bytes": 0,
+          "checkpoint_sha256": null,
+          "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+          "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+          "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+          "tie_break": "ascending numeric passage ID",
+          "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+          "peak_cuda_bytes": 244655616,
+          "avg_concepts_per_passage": 23.609834985387064,
+          "mean_latency_ms": 118.75282800964922,
+          "p95_latency_ms": 138.0754136982432,
+          "mean_postings_touched": 21363113.1474,
+          "k1": 0.6,
+          "b": 2.0,
+          "k2": 1.5,
+          "mrr_at_10": 0.33356015873015765,
+          "ndcg_at_10": 0.39359144248194144,
+          "recall_at_1000": 0.9604500000000001,
+          "num_queries": 5000
+        }
+      },
+      {
+        "k1": 1.2,
+        "b": 1.0,
+        "prefix": "/home/msai/vishakha001/sae-retrieval-p1/runs/full-corpus-j50421/selection/confirm-4",
+        "metrics": {
+          "method": "bm25",
+          "device": "cuda",
+          "scope": "Full-corpus concept retrieval",
+          "ndcg_gain": "linear",
+          "gpu_name": "NVIDIA A40",
+          "sample_limit": null,
+          "sample_seed": null,
+          "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+          "index_bytes": 1688270708,
+          "checkpoint_bytes": 0,
+          "checkpoint_sha256": null,
+          "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+          "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+          "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+          "tie_break": "ascending numeric passage ID",
+          "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+          "peak_cuda_bytes": 244655616,
+          "avg_concepts_per_passage": 23.609834985387064,
+          "mean_latency_ms": 118.75111433957936,
+          "p95_latency_ms": 138.04163954555406,
+          "mean_postings_touched": 21363113.1474,
+          "k1": 1.2,
+          "b": 1.0,
+          "k2": 1.5,
+          "mrr_at_10": 0.34001992063491937,
+          "ndcg_at_10": 0.39937233679248485,
+          "recall_at_1000": 0.9586000000000002,
+          "num_queries": 5000
+        }
+      }
+    ],
+    "selected_bm25": {
+      "k1": 1.2,
+      "b": 1.0,
+      "k2": 1.5
+    },
+    "models": {
+      "42": {
+        "path": "/home/msai/vishakha001/sae-retrieval-p1/runs/train5000-val5000-s42-j50216/model.pt",
+        "sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf"
+      },
+      "43": {
+        "path": "/home/msai/vishakha001/sae-retrieval-p1/runs/repeat-s43-j50396/model.pt",
+        "sha256": "5ef3e8415a7768860fff7560a6de35b4bce702d6907ee8a36d2f7588738f0e48"
+      },
+      "44": {
+        "path": "/home/msai/vishakha001/sae-retrieval-p1/runs/repeat-s44-j50396/model.pt",
+        "sha256": "c50391b0f0e634e66c25e0873d780add56764bef119c0b29251cb5a32fb04d11"
+      }
+    },
+    "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+    "validation_qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+    "validation_metrics": {
+      "released_bm25": {
+        "method": "bm25",
+        "device": "cuda",
+        "scope": "Full-corpus concept retrieval",
+        "ndcg_gain": "linear",
+        "gpu_name": "NVIDIA A40",
+        "sample_limit": null,
+        "sample_seed": null,
+        "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+        "index_bytes": 1688270708,
+        "checkpoint_bytes": 0,
+        "checkpoint_sha256": null,
+        "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+        "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+        "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+        "tie_break": "ascending numeric passage ID",
+        "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+        "peak_cuda_bytes": 244655616,
+        "avg_concepts_per_passage": 23.609834985387064,
+        "mean_latency_ms": 118.75282800964922,
+        "p95_latency_ms": 138.0754136982432,
+        "mean_postings_touched": 21363113.1474,
+        "k1": 0.6,
+        "b": 2.0,
+        "k2": 1.5,
+        "mrr_at_10": 0.33356015873015765,
+        "ndcg_at_10": 0.39359144248194144,
+        "recall_at_1000": 0.9604500000000001,
+        "num_queries": 5000
+      },
+      "tuned_bm25": {
+        "method": "bm25",
+        "device": "cuda",
+        "scope": "Full-corpus concept retrieval",
+        "ndcg_gain": "linear",
+        "gpu_name": "NVIDIA A40",
+        "sample_limit": null,
+        "sample_seed": null,
+        "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+        "index_bytes": 1688270708,
+        "checkpoint_bytes": 0,
+        "checkpoint_sha256": null,
+        "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+        "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+        "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+        "tie_break": "ascending numeric passage ID",
+        "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+        "peak_cuda_bytes": 244655616,
+        "avg_concepts_per_passage": 23.609834985387064,
+        "mean_latency_ms": 118.75111433957936,
+        "p95_latency_ms": 138.04163954555406,
+        "mean_postings_touched": 21363113.1474,
+        "k1": 1.2,
+        "b": 1.0,
+        "k2": 1.5,
+        "mrr_at_10": 0.34001992063491937,
+        "ndcg_at_10": 0.39937233679248485,
+        "recall_at_1000": 0.9586000000000002,
+        "num_queries": 5000
+      },
+      "learned_s42": {
+        "method": "learned",
+        "device": "cuda",
+        "scope": "Full-corpus concept retrieval",
+        "ndcg_gain": "linear",
+        "gpu_name": "NVIDIA A40",
+        "sample_limit": null,
+        "sample_seed": null,
+        "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+        "index_bytes": 1688270708,
+        "checkpoint_bytes": 152329,
+        "checkpoint_sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf",
+        "query_latents_sha256": "90a1652d2425ff5bfd7d4224403757e62cfffcb73a9c0785792dbb5d4feecb98",
+        "qrels_sha256": "a2d0d944d61bc1ca4cc2ee08f59e8a07af97f996c8950e18ac4fc3b438138d09",
+        "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+        "tie_break": "ascending numeric passage ID",
+        "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+        "peak_cuda_bytes": 309311488,
+        "avg_concepts_per_passage": 23.609834985387064,
+        "mean_latency_ms": 186.2859473197779,
+        "p95_latency_ms": 216.48938159451063,
+        "mean_postings_touched": 21363113.1474,
+        "k1": 0.6,
+        "b": 2.0,
+        "k2": 1.5,
+        "mrr_at_10": 0.39860380952380786,
+        "ndcg_at_10": 0.4586641544032414,
+        "recall_at_1000": 0.9692666666666668,
+        "num_queries": 5000
+      }
+    },
+    "heldout_rule": "No architecture, epoch, seed, sparsity, or BM25 selection using held-out results"
+  },
+  "heldout": {
+    "scope": "Locked full-corpus held-out evaluation",
+    "protocol_sha256": "24ad23ca19de372b5ac2a1dd128889e3fa9dd5c6112ff48d933cec9da0225e02",
+    "splits": {
+      "dev": {
+        "metrics": {
+          "released_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "7e59480458a4c3b0d12fe4a2d96653e15dba93aae63dca2fd000b79a21b9f9ab",
+            "qrels_sha256": "ddc607dbe7b748d7168e8675a242f0811d47febaa2e69d3af09d7ab249c68d7e",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 244932608,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 122.88238495809355,
+            "p95_latency_ms": 142.74023080033655,
+            "mean_postings_touched": 21410410.641833812,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.3157805180333818,
+            "ndcg_at_10": 0.3740947300067858,
+            "recall_at_1000": 0.9472301814708695,
+            "num_queries": 6980
+          },
+          "tuned_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "7e59480458a4c3b0d12fe4a2d96653e15dba93aae63dca2fd000b79a21b9f9ab",
+            "qrels_sha256": "ddc607dbe7b748d7168e8675a242f0811d47febaa2e69d3af09d7ab249c68d7e",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 244932608,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 122.08632041088212,
+            "p95_latency_ms": 141.9656682970526,
+            "mean_postings_touched": 21410410.641833812,
+            "k1": 1.2,
+            "b": 1.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.3239189634784176,
+            "ndcg_at_10": 0.38258097974495753,
+            "recall_at_1000": 0.9462511938872973,
+            "num_queries": 6980
+          },
+          "learned_s42": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152329,
+            "checkpoint_sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf",
+            "query_latents_sha256": "7e59480458a4c3b0d12fe4a2d96653e15dba93aae63dca2fd000b79a21b9f9ab",
+            "qrels_sha256": "ddc607dbe7b748d7168e8675a242f0811d47febaa2e69d3af09d7ab249c68d7e",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 309463040,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 191.13914915070723,
+            "p95_latency_ms": 222.3970853036007,
+            "mean_postings_touched": 21410410.641833812,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.3588153795424562,
+            "ndcg_at_10": 0.4190584824301182,
+            "recall_at_1000": 0.9532831900668577,
+            "num_queries": 6980
+          },
+          "learned_s43": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "5ef3e8415a7768860fff7560a6de35b4bce702d6907ee8a36d2f7588738f0e48",
+            "query_latents_sha256": "7e59480458a4c3b0d12fe4a2d96653e15dba93aae63dca2fd000b79a21b9f9ab",
+            "qrels_sha256": "ddc607dbe7b748d7168e8675a242f0811d47febaa2e69d3af09d7ab249c68d7e",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 309463040,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 192.8769802713637,
+            "p95_latency_ms": 224.148617656101,
+            "mean_postings_touched": 21410410.641833812,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.35952278619184036,
+            "ndcg_at_10": 0.4195644322917486,
+            "recall_at_1000": 0.9506924546322828,
+            "num_queries": 6980
+          },
+          "learned_s44": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "c50391b0f0e634e66c25e0873d780add56764bef119c0b29251cb5a32fb04d11",
+            "query_latents_sha256": "7e59480458a4c3b0d12fe4a2d96653e15dba93aae63dca2fd000b79a21b9f9ab",
+            "qrels_sha256": "ddc607dbe7b748d7168e8675a242f0811d47febaa2e69d3af09d7ab249c68d7e",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 309463040,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 191.41779503300188,
+            "p95_latency_ms": 222.3462074471172,
+            "mean_postings_touched": 21410410.641833812,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.3617462023013598,
+            "ndcg_at_10": 0.4210824108585934,
+            "recall_at_1000": 0.9518982808022924,
+            "num_queries": 6980
+          }
+        },
+        "learned_three_seed_summary": {
+          "mrr_at_10": {
+            "mean": 0.3600281226785521,
+            "sample_std": 0.001529363996773975,
+            "values": [
+              0.3588153795424562,
+              0.35952278619184036,
+              0.3617462023013598
+            ]
+          },
+          "ndcg_at_10": {
+            "mean": 0.4199017751934867,
+            "sample_std": 0.0010532909122898323,
+            "values": [
+              0.4190584824301182,
+              0.4195644322917486,
+              0.4210824108585934
+            ]
+          },
+          "recall_at_1000": {
+            "mean": 0.9519579751671443,
+            "sample_std": 0.0012963988915016794,
+            "values": [
+              0.9532831900668577,
+              0.9506924546322828,
+              0.9518982808022924
+            ]
+          }
+        },
+        "primary_seed_comparison": {
+          "primary_metric": "mrr_at_10",
+          "ndcg_gain": "linear",
+          "permutations": 10000,
+          "learned": {
+            "mrr_at_10": 0.3588153795424562,
+            "ndcg_at_10": 0.4190584824301182,
+            "recall_at_1000": 0.9532831900668577,
+            "num_queries": 6980
+          },
+          "references": {
+            "released": {
+              "mrr_at_10": 0.3157805180333818,
+              "ndcg_at_10": 0.3740947300067858,
+              "recall_at_1000": 0.9472301814708695,
+              "num_queries": 6980
+            },
+            "tuned": {
+              "mrr_at_10": 0.3239189634784176,
+              "ndcg_at_10": 0.38258097974495753,
+              "recall_at_1000": 0.9462511938872973,
+              "num_queries": 6980
+            }
+          },
+          "paired_randomization_tests": [
+            {
+              "reference": "released",
+              "metric": "mrr_at_10",
+              "difference": 0.04303486150907368,
+              "p_value": 9.999000099990002e-05,
+              "p_holm": 0.00019998000199980003,
+              "significant_at_05": true,
+              "significant_improvement_at_05": true
+            },
+            {
+              "reference": "tuned",
+              "metric": "mrr_at_10",
+              "difference": 0.03489641606403782,
+              "p_value": 9.999000099990002e-05,
+              "p_holm": 0.00019998000199980003,
+              "significant_at_05": true,
+              "significant_improvement_at_05": true
+            }
+          ],
+          "scope": "Inference depends on whether these queries were untouched during selection; do not claim held-out significance on validation"
+        }
+      },
+      "dl19": {
+        "metrics": {
+          "released_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "d5e8d460935cce14c3a54bafe0ba01357945461e4cc558a4f960b0e4d8e67a12",
+            "qrels_sha256": "8a1f10d550732e4cd91d7fc49846a3784de4040972f583e69285a88f3c5fee92",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 242194944,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 125.23978783750398,
+            "p95_latency_ms": 146.22731100098463,
+            "mean_postings_touched": 21692143.627906978,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.8982558139534884,
+            "ndcg_at_10": 0.6110942929229952,
+            "recall_at_1000": 0.714830327515058,
+            "num_queries": 43
+          },
+          "tuned_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "d5e8d460935cce14c3a54bafe0ba01357945461e4cc558a4f960b0e4d8e67a12",
+            "qrels_sha256": "8a1f10d550732e4cd91d7fc49846a3784de4040972f583e69285a88f3c5fee92",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 242194944,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 125.54138116277944,
+            "p95_latency_ms": 146.792716399068,
+            "mean_postings_touched": 21692143.627906978,
+            "k1": 1.2,
+            "b": 1.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.8901808785529716,
+            "ndcg_at_10": 0.6166274415374687,
+            "recall_at_1000": 0.7086400583030407,
+            "num_queries": 43
+          },
+          "learned_s42": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152329,
+            "checkpoint_sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf",
+            "query_latents_sha256": "d5e8d460935cce14c3a54bafe0ba01357945461e4cc558a4f960b0e4d8e67a12",
+            "qrels_sha256": "8a1f10d550732e4cd91d7fc49846a3784de4040972f583e69285a88f3c5fee92",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308789760,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 194.4977874193492,
+            "p95_latency_ms": 225.64919020587695,
+            "mean_postings_touched": 21692143.627906978,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.952325581395349,
+            "ndcg_at_10": 0.6519638905723703,
+            "recall_at_1000": 0.6726584836736663,
+            "num_queries": 43
+          },
+          "learned_s43": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "5ef3e8415a7768860fff7560a6de35b4bce702d6907ee8a36d2f7588738f0e48",
+            "query_latents_sha256": "d5e8d460935cce14c3a54bafe0ba01357945461e4cc558a4f960b0e4d8e67a12",
+            "qrels_sha256": "8a1f10d550732e4cd91d7fc49846a3784de4040972f583e69285a88f3c5fee92",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308789760,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 194.54384441903744,
+            "p95_latency_ms": 226.1104300050647,
+            "mean_postings_touched": 21692143.627906978,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.9498338870431894,
+            "ndcg_at_10": 0.6538343322077008,
+            "recall_at_1000": 0.669062776221805,
+            "num_queries": 43
+          },
+          "learned_s44": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "c50391b0f0e634e66c25e0873d780add56764bef119c0b29251cb5a32fb04d11",
+            "query_latents_sha256": "d5e8d460935cce14c3a54bafe0ba01357945461e4cc558a4f960b0e4d8e67a12",
+            "qrels_sha256": "8a1f10d550732e4cd91d7fc49846a3784de4040972f583e69285a88f3c5fee92",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308789760,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 194.76179397671055,
+            "p95_latency_ms": 226.46657639779733,
+            "mean_postings_touched": 21692143.627906978,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.9387596899224806,
+            "ndcg_at_10": 0.6448655226095824,
+            "recall_at_1000": 0.6613883143541723,
+            "num_queries": 43
+          }
+        },
+        "learned_three_seed_summary": {
+          "mrr_at_10": {
+            "mean": 0.9469730527870063,
+            "sample_std": 0.007221262517345806,
+            "values": [
+              0.952325581395349,
+              0.9498338870431894,
+              0.9387596899224806
+            ]
+          },
+          "ndcg_at_10": {
+            "mean": 0.6502212484632178,
+            "sample_std": 0.00473154177222062,
+            "values": [
+              0.6519638905723703,
+              0.6538343322077008,
+              0.6448655226095824
+            ]
+          },
+          "recall_at_1000": {
+            "mean": 0.6677031914165479,
+            "sample_std": 0.005756781414517176,
+            "values": [
+              0.6726584836736663,
+              0.669062776221805,
+              0.6613883143541723
+            ]
+          }
+        },
+        "primary_seed_comparison": {
+          "primary_metric": "ndcg_at_10",
+          "ndcg_gain": "linear",
+          "permutations": 10000,
+          "learned": {
+            "mrr_at_10": 0.952325581395349,
+            "ndcg_at_10": 0.6519638905723703,
+            "recall_at_1000": 0.6726584836736663,
+            "num_queries": 43
+          },
+          "references": {
+            "released": {
+              "mrr_at_10": 0.8982558139534884,
+              "ndcg_at_10": 0.6110942929229952,
+              "recall_at_1000": 0.714830327515058,
+              "num_queries": 43
+            },
+            "tuned": {
+              "mrr_at_10": 0.8901808785529716,
+              "ndcg_at_10": 0.6166274415374687,
+              "recall_at_1000": 0.7086400583030407,
+              "num_queries": 43
+            }
+          },
+          "paired_randomization_tests": [
+            {
+              "reference": "released",
+              "metric": "ndcg_at_10",
+              "difference": 0.04086959764937485,
+              "p_value": 0.06109389061093891,
+              "p_holm": 0.12218778122187782,
+              "significant_at_05": false,
+              "significant_improvement_at_05": false
+            },
+            {
+              "reference": "tuned",
+              "metric": "ndcg_at_10",
+              "difference": 0.03533644903490127,
+              "p_value": 0.12618738126187382,
+              "p_holm": 0.12618738126187382,
+              "significant_at_05": false,
+              "significant_improvement_at_05": false
+            }
+          ],
+          "scope": "Inference depends on whether these queries were untouched during selection; do not claim held-out significance on validation"
+        }
+      },
+      "dl20": {
+        "metrics": {
+          "released_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "096769a1aa623245fd653cd47b8284041b01186440d66e687d66a6934e71bba9",
+            "qrels_sha256": "60d4c34561f9687f8f73e0a752ba80ab80159b3e9c1bedd0a351f747ed6f5684",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 243732992,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 123.10251951917222,
+            "p95_latency_ms": 144.105330048842,
+            "mean_postings_touched": 21276142.888888888,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.87826278659612,
+            "ndcg_at_10": 0.5685152581443744,
+            "recall_at_1000": 0.7166429795415397,
+            "num_queries": 54
+          },
+          "tuned_bm25": {
+            "method": "bm25",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 0,
+            "checkpoint_sha256": null,
+            "query_latents_sha256": "096769a1aa623245fd653cd47b8284041b01186440d66e687d66a6934e71bba9",
+            "qrels_sha256": "60d4c34561f9687f8f73e0a752ba80ab80159b3e9c1bedd0a351f747ed6f5684",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 243732992,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 122.81509753665887,
+            "p95_latency_ms": 143.8459608980338,
+            "mean_postings_touched": 21276142.888888888,
+            "k1": 1.2,
+            "b": 1.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.8808641975308641,
+            "ndcg_at_10": 0.5726919240314411,
+            "recall_at_1000": 0.7023035962011345,
+            "num_queries": 54
+          },
+          "learned_s42": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152329,
+            "checkpoint_sha256": "057cdfb81b108e4bb04d63e5e5564cadb6b89de607e05e5c5b7b2e3cf7956ccf",
+            "query_latents_sha256": "096769a1aa623245fd653cd47b8284041b01186440d66e687d66a6934e71bba9",
+            "qrels_sha256": "60d4c34561f9687f8f73e0a752ba80ab80159b3e9c1bedd0a351f747ed6f5684",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308742656,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 191.10299659277425,
+            "p95_latency_ms": 223.97232314724533,
+            "mean_postings_touched": 21276142.888888888,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.9020576131687243,
+            "ndcg_at_10": 0.6142346436757217,
+            "recall_at_1000": 0.6808392596781025,
+            "num_queries": 54
+          },
+          "learned_s43": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "5ef3e8415a7768860fff7560a6de35b4bce702d6907ee8a36d2f7588738f0e48",
+            "query_latents_sha256": "096769a1aa623245fd653cd47b8284041b01186440d66e687d66a6934e71bba9",
+            "qrels_sha256": "60d4c34561f9687f8f73e0a752ba80ab80159b3e9c1bedd0a351f747ed6f5684",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308742656,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 190.75767744517955,
+            "p95_latency_ms": 223.53438795362308,
+            "mean_postings_touched": 21276142.888888888,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.9298353909465021,
+            "ndcg_at_10": 0.6253148262853053,
+            "recall_at_1000": 0.6814837642296667,
+            "num_queries": 54
+          },
+          "learned_s44": {
+            "method": "learned",
+            "device": "cuda",
+            "scope": "Full-corpus concept retrieval",
+            "ndcg_gain": "linear",
+            "gpu_name": "NVIDIA A40",
+            "sample_limit": null,
+            "sample_seed": null,
+            "latency_scope": "Warm retrieval including posting transfers and ranking; excludes text/SAE encoding and index load",
+            "index_bytes": 1688270708,
+            "checkpoint_bytes": 152265,
+            "checkpoint_sha256": "c50391b0f0e634e66c25e0873d780add56764bef119c0b29251cb5a32fb04d11",
+            "query_latents_sha256": "096769a1aa623245fd653cd47b8284041b01186440d66e687d66a6934e71bba9",
+            "qrels_sha256": "60d4c34561f9687f8f73e0a752ba80ab80159b3e9c1bedd0a351f747ed6f5684",
+            "index_source_sha256": "5e468539e222d5385412949cf3891130ceef156fd0db50357beb960da2eeab3c",
+            "tie_break": "ascending numeric passage ID",
+            "precision": "float32 neural impacts, float64 accumulation; TF32 disabled",
+            "peak_cuda_bytes": 308742656,
+            "avg_concepts_per_passage": 23.609834985387064,
+            "mean_latency_ms": 190.75768690756243,
+            "p95_latency_ms": 223.06027294907835,
+            "mean_postings_touched": 21276142.888888888,
+            "k1": 0.6,
+            "b": 2.0,
+            "k2": 1.5,
+            "mrr_at_10": 0.9092592592592593,
+            "ndcg_at_10": 0.6188295489308133,
+            "recall_at_1000": 0.672468086772863,
+            "num_queries": 54
+          }
+        },
+        "learned_three_seed_summary": {
+          "mrr_at_10": {
+            "mean": 0.9137174211248286,
+            "sample_std": 0.01441553467557182,
+            "values": [
+              0.9020576131687243,
+              0.9298353909465021,
+              0.9092592592592593
+            ]
+          },
+          "ndcg_at_10": {
+            "mean": 0.6194596729639468,
+            "sample_std": 0.005566902539858165,
+            "values": [
+              0.6142346436757217,
+              0.6253148262853053,
+              0.6188295489308133
+            ]
+          },
+          "recall_at_1000": {
+            "mean": 0.6782637035602107,
+            "sample_std": 0.0050294857578670315,
+            "values": [
+              0.6808392596781025,
+              0.6814837642296667,
+              0.672468086772863
+            ]
+          }
+        },
+        "primary_seed_comparison": {
+          "primary_metric": "ndcg_at_10",
+          "ndcg_gain": "linear",
+          "permutations": 10000,
+          "learned": {
+            "mrr_at_10": 0.9020576131687243,
+            "ndcg_at_10": 0.6142346436757217,
+            "recall_at_1000": 0.6808392596781025,
+            "num_queries": 54
+          },
+          "references": {
+            "released": {
+              "mrr_at_10": 0.87826278659612,
+              "ndcg_at_10": 0.5685152581443744,
+              "recall_at_1000": 0.7166429795415397,
+              "num_queries": 54
+            },
+            "tuned": {
+              "mrr_at_10": 0.8808641975308641,
+              "ndcg_at_10": 0.5726919240314411,
+              "recall_at_1000": 0.7023035962011345,
+              "num_queries": 54
+            }
+          },
+          "paired_randomization_tests": [
+            {
+              "reference": "released",
+              "metric": "ndcg_at_10",
+              "difference": 0.045719385531347,
+              "p_value": 0.008399160083991601,
+              "p_holm": 0.008399160083991601,
+              "significant_at_05": true,
+              "significant_improvement_at_05": true
+            },
+            {
+              "reference": "tuned",
+              "metric": "ndcg_at_10",
+              "difference": 0.04154271964428046,
+              "p_value": 0.0016998300169983002,
+              "p_holm": 0.0033996600339966003,
+              "significant_at_05": true,
+              "significant_improvement_at_05": true
+            }
+          ],
+          "scope": "Inference depends on whether these queries were untouched during selection; do not claim held-out significance on validation"
+        }
+      }
+    }
+  },
+  "verification": {
+    "status": "passed",
+    "checks": [
+      "Recomputed all 15 full-corpus rankings against local frozen qrels using an independent streaming calculation",
+      "Exactly 1000 distinct passages per judged query, contiguous ranks and finite descending scores",
+      "Recomputed three-seed means/sample standard deviations and 10000-permutation Holm-adjusted primary-seed tests",
+      "Freeze SHA256 matches held-out protocol"
+    ],
+    "run_sha256": {
+      "dev-released.run": "9642f37dfb36dac1f229384e8f6b7f27cc7976f2e715d0c2e01217cc148f517c",
+      "dev-tuned.run": "6aff29518cebddc14637cb29a6cb7f6c48e33fba15ea3f6b964f4e55ebfc2298",
+      "dev-s42.run": "7b89765609410c4556d583da5171944a38e4251156c59f4c57a87ded1afd634a",
+      "dev-s43.run": "2a85bbdd43f997e8a95275451970e1c7f8e23e895ff0f7dd7b8231ab74bc76de",
+      "dev-s44.run": "f75bea6b59c4743b2335aef10d61ed50604ca0a31a53551eb0e04438ffa9a371",
+      "dl19-released.run": "9b0c6ba1ade33404034f3b7bcfa22c7623a7908c713ef57eba20c10d27856eea",
+      "dl19-tuned.run": "07b9b3a99f3a5efdc465e6a15a3771d4473dbae66e26563bc2076700b922e6e7",
+      "dl19-s42.run": "1d480147e3d4748ce2d02e357b26ed5df6f4e881eda0a2699e332608152ff46f",
+      "dl19-s43.run": "35ca97764fe87b128888e51443187f363c37eb62593b0de3ce0530c30fa54571",
+      "dl19-s44.run": "2e2f663f760690ef7cd09f96831817667cc3e5df2c030b9cba5189cec401c9e1",
+      "dl20-released.run": "df98ffb192042d79f5ee35a1494d7e7b62d11319b3d596794056f4c1c2f441da",
+      "dl20-tuned.run": "2f251998494c4249cb09137082710f07a3a12f5f5612df3a16818dff1ffeb833",
+      "dl20-s42.run": "74c60ae92654213867a69dd0a142285e16b4ce1fa2c9994c99ef938af2b46352",
+      "dl20-s43.run": "0bb1c3101c1f7424c5947263fa897dbc2e53bf4826f2d4e9b2dc519390338b9c",
+      "dl20-s44.run": "3b3d6d2237595e82aea2c7ea822b47f9ce1c7497ad8e7267948b611a35024ac9"
+    },
+    "protocol_sha256": "24ad23ca19de372b5ac2a1dd128889e3fa9dd5c6112ff48d933cec9da0225e02"
+  },
+  "limitations": [
+    "No held-out tuning or further method selection after this evaluation",
+    "TREC DL19 top-10 gain is not significant after Holm correction",
+    "TREC Recall@1000 decreases despite better NDCG@10",
+    "P1 warm retrieval latency is approximately 192ms versus 122ms for tuned BM25 on A40; encoding and index loading excluded",
+    "Index postings identical; P1 adds a 152329-byte checkpoint for primary seed42",
+    "P5 shared vocabulary-mismatch query IDs still required; no subset results claimed"
+  ]
+}
