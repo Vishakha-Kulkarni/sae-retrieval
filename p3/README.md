@@ -1,127 +1,102 @@
 # P3: Adaptive sparsity per passage
 
-P3 changes passage encoding only. It uses the released SAE checkpoint and its
-encoder activations, then retains activations above a scalar threshold with a
-minimum and maximum concept count per passage. The resulting sparse features
-keep the upstream CL-SR JSONL schema (`docid`, `ids`, `weight`) and can be fed
-to the existing inverted-index builder.
+P3 changes passage encoding only. It uses the released SAE checkpoint and
+encoder activations, retaining activations above a validation-tuned threshold
+with a minimum and maximum concept count per passage. Query encoding, the SAE
+checkpoint, and CL-SR BM25 scoring stay fixed.
 
-`adaptive_encoder.py` provides `encode_adaptive_batch(model, embeddings, ...)`.
-It accepts the released-compatible SAE model from `p2.sae` and returns rows
-of `[batch_index, concept_ids, activation_weights]`, plus an optional
-reconstruction. The extraction runner reads the float32 `.npy` embeddings
-produced by `p2.encode` lazily, so it does not load the whole corpus into RAM.
+`adaptive_encoder.py` and `extract_passage_latents.py` produce sparse rows in the
+upstream CL-SR JSONL schema (`docid`, `ids`, `weight`). The extraction runner
+reads float32 `.npy` embeddings lazily. `--resume` validates existing output
+records and continues at the next passage after an interrupted run.
 
-The extraction runner can be used after initializing the upstream submodule:
+## Validation procedure
+
+Use only the 5,000-query training-derived validation split for threshold
+selection. Never tune with MS MARCO dev or TREC DL qrels. The quick candidate
+sweep in `validation_sweep.py` / `validation_sweep_exact.py` is a screening
+proxy; final P3 comparisons use the full-corpus disk index and full validation
+query set.
+
+The full-corpus workflow uses a top-128 passage activation cache. It can be
+created with:
 
 ```bash
-python -m p3.extract_passage_latents \
+python -m p3.extract_topk_cache \
   --checkpoint PATH_TO_SAE_CHECKPOINT \
   --input-embeddings PATH_TO_PASSAGES_NPY \
-  --output results/p3_adaptive_passages.jsonl \
-  --mode adaptive --threshold VALIDATION_TUNED_THRESHOLD \
-  --min-concepts 8 --max-concepts 128
+  --output-dir PATH_TO_P3_OUTPUT/top128_cache \
+  --k 128 --resume
 ```
 
-Use `--max-docs 1000000` for a development run on a prefix of the corpus. For
-fixed-k comparisons, run the same script with `--mode fixed --k 32` (and repeat
-for 48, 64, and 128). Each output file can be indexed with the upstream
-`cl-sr/indexing.py`; for adaptive output, leave its `--max_latents` unset so it
-does not silently truncate selections a second time.
-
-## Validation screening
-
-Once the team's training-derived validation files are prepared, screen
-thresholds against fixed-k baselines with:
+Build fixed-k indexes from that cache for `k=32, 48, 64, 128`:
 
 ```bash
-python -m p3.validation_sweep \
+python -m p3.build_fixed_disk \
+  --cache PATH_TO_P3_OUTPUT/top128_cache \
+  --output PATH_TO_P3_OUTPUT/fixed32.diskindex --k 32
+```
+
+Repeat with the required `k` and output name for each baseline. The dedicated
+`build_fixed128_disk.py` is also available for k=128. Both builders create a
+sharded on-disk index without loading the corpus index into Python memory.
+
+For an adaptive setting, first compute full-corpus document frequencies and
+average document length. These must use the same threshold and bounds as the
+index build:
+
+```bash
+python -m p3.compute_adaptive_corpus_stats \
+  --cache PATH_TO_P3_OUTPUT/top128_cache \
+  --output PATH_TO_P3_OUTPUT/adaptive_exact_stats \
+  --thresholds 0.49723 --min-concepts 8
+
+python -m p3.build_adaptive_disk \
+  --cache PATH_TO_P3_OUTPUT/top128_cache \
+  --stats PATH_TO_P3_OUTPUT/adaptive_exact_stats/threshold_0.49723 \
+  --output PATH_TO_P3_OUTPUT/adaptive_t0.49723.diskindex \
+  --threshold 0.49723 --min-concepts 8 --max-concepts 128
+
+python -m p3.sort_adaptive_shards \
+  --index-dir PATH_TO_P3_OUTPUT/adaptive_t0.49723.diskindex
+```
+
+Sorting is required before retrieval: each posting shard must be globally
+ordered by concept ID and document ID for binary-search lookup.
+
+Export validation query latents once using the frozen SAE checkpoint threshold,
+then evaluate each index with the same queries and validation qrels:
+
+```bash
+python -m p2.evaluate export \
   --checkpoint PATH_TO_SAE_CHECKPOINT \
-  --data-dir PATH_TO_VALIDATION_DATA \
+  --embeddings PATH_TO_VALIDATION_QUERIES_NPY \
+  --output PATH_TO_P3_OUTPUT/validation.query.json --queries
+
+python -m p3.evaluate_fixed_disk \
+  --index PATH_TO_P3_OUTPUT/adaptive_t0.49723.diskindex \
+  --queries PATH_TO_P3_OUTPUT/validation.query.json \
   --qrels PATH_TO_VALIDATION_QRELS \
-  --thresholds 0.05,0.1,0.15,0.2 \
-  --min-counts 8,16 --max-counts 64,128 \
-  --output results/p3_validation_sweep.json
+  --checkpoint PATH_TO_P3_OUTPUT/adaptive.validation.checkpoint.json \
+  --output PATH_TO_P3_OUTPUT/adaptive.validation.json
 ```
 
-The data directory follows P2's validation layout: `passages.npy`,
-`validation_queries.npy`, `validation.cands.npy`, and `validation_queries.ids`.
-The sweep evaluates CL-SR BM25 on fixed dense candidate lists and estimates
-corpus document frequencies and mean concept counts from a deterministic
-passage sample. It is a screening proxy; use the full-index evaluation below to
-choose/report final validation numbers. Never pass dev or TREC qrels to the
-sweep when tuning.
+Use `evaluate_fixed128_disk.py` for the dedicated k=128 index. Evaluators save
+progress checkpoints and report MRR@10, Recall@1000, NDCG@10, index size, mean
+and median query latency, and average passage concepts. Keep the query set,
+host, scoring constants, and index implementation fixed for fair latency
+comparisons.
 
-## Full-index evaluation
+## Recorded full-corpus validation result
 
-Extract passage latents for adaptive and fixed k = 32, 48, 64, 128, then query
-latents once using the unchanged released query threshold. Build and score each
-variant against the training-derived validation qrels:
-
-```bash
-python -m p3.evaluate_index \
-  --passage-latents results/p3_adaptive_passages.jsonl \
-  --query-latents data/validation.query.json \
-  --qrels data/validation.qrels \
-  --output results/p3_adaptive_validation.json
-```
-
-This calls the pinned upstream CL-SR index builder and BM25 scorer. Its report
-records MRR@10, Recall@1000, NDCG@10, mean concepts per passage, serialized
-pickle index size, index build time, and mean/median query latency. Run the
-same command for each fixed-k file. For adaptive output, do not set
-`--max-latents`: that would truncate the selected concepts again. Keep machine,
-query encoding, scoring constants, corpus, and index code fixed when comparing
-latency and size. Time the same validation query set for each variant.
-
-For a cluster node with sufficient RAM, `scripts/nscc/p3_full_eval.pbs` runs
-the fixed k=32 and screened adaptive (`tau=3.5`, min=8, max=32) full-corpus
-validation comparison sequentially. Copy the checkpoint and required files to
-the cluster paths, then submit that PBS job. The upstream Python-object index
-needs a high-memory node; this workstation has 16 GiB RAM and is not suitable
-for building the full index safely.
-
-## Selection rule
-
-For passage embedding `x`, the frozen SAE encoder produces activations
-`a = W_enc (x - b_pre)`. Keep each activation strictly greater than threshold
-`tau`, capped at `max_concepts`. If fewer than `min_concepts` pass, fill from
-the strongest remaining positive activations. If a passage has fewer than the
-minimum positive activations in total, it retains those available. Unlike fixed
-top-k, the number retained can vary by passage. Tune `tau` and the bounds using only the
-5,000-query training-derived validation split; use validation retrieval quality
-to choose the smallest mean concept count whose MRR@10 is within 0.005 of the
-best fixed-k validation result. Then report MS MARCO dev and TREC DL only as
-final evaluation.
-
-The comparison should include fixed k = 32, 48, 64, and 128, as required by the
-project plan. For each variant record MRR@10, Recall@1000, mean concepts per
-passage, serialized index size, and query latency. Keep the SAE checkpoint,
-query encoding, scoring function, corpus, and index implementation fixed.
-
-## Base method notes for the report
-
-The report-ready P3 method, base-method description, and result table template
-are in [`docs/P3_results.md`](../docs/P3_results.md).
-
-The released pipeline encodes dense SimLM passage and query embeddings with a
-sparse autoencoder. The SAE's learned linear encoder maps the input embedding
-to an overcomplete latent vector; BatchTopK training selects a fixed number of
-positive latent activations across each training batch, and a tied linear
-decoder reconstructs the dense embedding. At inference, `encode_batchtopk`
-uses the checkpoint's stored `mean_of_min_act` threshold (or the explicitly
-provided equivalent) and emits active latent IDs with activation weights.
-CL-SR stores passage latent IDs and weights in an inverted index, then scores
-passages with BM25 over shared latent concepts. Keep the query encoding,
-checkpoint, BM25 constants, corpus, and index builder unchanged for P3.
-
-This implementation extends only passage-time latent selection; it does not
-retrain the SAE or alter query encoding or CL-SR scoring. Confirm the exact
-training and checkpoint settings against the team's frozen checkpoint before
-finalizing this description.
+The measured results and their interpretation are in
+[`docs/P3_results.md`](../docs/P3_results.md). The adaptive configuration
+evaluated there missed the planned quality and index-size target; report it as
+a negative result. The binary indexes, caches, checkpoints, and logs are run
+artifacts and should be generated locally or on the cluster rather than
+committed to the repository.
 
 ## Upstream source
 
-The official upstream source is included as a Git submodule at
-`upstream/Decoding-Dense-Embeddings` and is Apache-2.0 licensed. Initialize it
-with `git submodule update --init --recursive` after cloning this repository.
+The official CL-SR implementation is pinned under
+`upstream/Decoding-Dense-Embeddings`; initialize the submodule after cloning.

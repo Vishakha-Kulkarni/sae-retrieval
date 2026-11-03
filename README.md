@@ -38,13 +38,13 @@ P3's implementation and method notes are in [`p3/README.md`](p3/README.md).
 The encoder adapter in `p3/adaptive_encoder.py` retains thresholded SAE
 activations with minimum and maximum per-passage counts and emits the sparse
 rows expected by the upstream CL-SR pipeline. `p3/extract_passage_latents.py`
-provides adaptive and fixed-k extraction modes; `python -m p3.validation_sweep`
-screens threshold/min/max settings on validation dense candidates.
-`python -m p3.evaluate_index` builds the pinned upstream CL-SR index and reports
-full retrieval metrics, serialized index size, and query latency for validation
-or final evaluation.
+provides adaptive and fixed-k extraction modes. `p3.validation_sweep` and
+`p3.validation_sweep_exact` screen settings using training-derived validation
+data. `p3.extract_topk_cache`, the sharded disk-index builders, and the disk
+evaluators support full-corpus comparisons without a large in-memory Python
+index. See `p3/README.md` for commands and the validation-only tuning rule.
 
-Tune the adaptive threshold on the training-derived validation split only. The
-P3 experiment still needs the team's frozen SAE checkpoint, passage embeddings,
-validation/evaluation setup, and index/search measurements. Do not use MS MARCO
-dev or TREC DL to tune the threshold.
+The full-corpus validation comparison is recorded in
+[`docs/P3_results.md`](docs/P3_results.md). It reports a negative adaptive
+result: the evaluated setting did not meet the planned quality-preserving
+index-size reduction. Do not use MS MARCO dev or TREC DL to tune the threshold.
