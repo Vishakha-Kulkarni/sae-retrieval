@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 
-K2 = float(os.environ.get("K2", 2.5))  # paper Table 10, k = 32
+K2 = float(os.environ.get("K2", 1.5))  
 
 
 def idf(df, num_docs, kind):

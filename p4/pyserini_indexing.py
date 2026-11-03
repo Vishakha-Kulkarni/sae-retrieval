@@ -12,8 +12,9 @@ h_d depends only on the passage, so it is stored in the index; idf * h_q is put 
 by p4 search. Lucene stores integer impacts, so both sides are scaled by --scale and rounded.
 --length count matches the released code; --length l1 follows the paper (sum of activations).
 --drop removes the listed concepts from every passage (P4 pruning). It is applied after the
---max-latents truncation, so a pruned index is the baseline index minus those concepts' postings;
-corpus statistics are recomputed on what remains. Search needs no change: pruned concepts have
+--max-latents truncation, and passage lengths (and their average) are taken from before the drop,
+so a pruned index is exactly the baseline index minus those concepts' postings: every remaining
+posting keeps its score (--renormalize recomputes lengths instead). Search needs no change: pruned concepts have
 df = 0 in the new df.npy, so p4.pyserini_search skips them in queries too.
 """
 import argparse
@@ -33,19 +34,22 @@ try:
 except ImportError:
     loads = json.loads
 
-K1, B = float(os.environ.get("K1", 0.6)), float(os.environ.get("B", 1.75))  # paper Table 10, k = 32 (k2 = 2.5 is query-side)
+K1, B = float(os.environ.get("K1", 0.6)), float(os.environ.get("B", 2.0))  # released repo: cl-sr/latent_retrieve.py (k1, k2, b = 0.6, 1.5, 2.0)
 
 
 def top_concepts(record, max_latents, drop=None):
+    """Top concepts after --drop, plus the weights before --drop (used for the passage length, so
+    pruning removes postings without changing the scores of the concepts that remain)."""
     ids = np.asarray(record['ids'], dtype=np.int64)
     weights = np.asarray(record['weight'], dtype=np.float64)
     if max_latents is not None and len(ids) > max_latents:
         keep = np.argsort(-weights, kind='stable')[:max_latents]
         ids, weights = ids[keep], weights[keep]
+    before_drop = weights
     if drop is not None and len(ids):
         keep = ~drop[np.minimum(ids, len(drop) - 1)] | (ids >= len(drop))
         ids, weights = ids[keep], weights[keep]
-    return ids, weights
+    return ids, weights, before_drop
 
 
 def load_drop(path):
@@ -61,7 +65,7 @@ def doc_length(weights, mode):
     return float(len(weights)) if mode == 'count' else float(weights.sum())
 
 
-def corpus_stats(path, max_latents, length_mode, num_concepts=None, drop=None):
+def corpus_stats(path, max_latents, length_mode, num_concepts=None, drop=None, renormalize=False):
     """Pass 1: document frequency per concept and average passage length (after truncation)."""
     df = np.zeros(num_concepts or 1 << 16, dtype=np.int64)
     total_length, num_docs = 0.0, 0
@@ -70,11 +74,11 @@ def corpus_stats(path, max_latents, length_mode, num_concepts=None, drop=None):
             record = loads(line)
             if int(record['docid']) != row:
                 raise ValueError(f'docid {record["docid"]} on line {row}: passage IDs must equal row positions')
-            ids, weights = top_concepts(record, max_latents, drop)
+            ids, weights, before_drop = top_concepts(record, max_latents, drop)
             if len(ids) and ids.max() >= len(df):
                 df = np.resize(df, max(int(ids.max()) + 1, 2 * len(df)))
             np.add.at(df, ids, 1)
-            total_length += doc_length(weights, length_mode)
+            total_length += doc_length(weights if renormalize else before_drop, length_mode)
             num_docs += 1
             if num_docs % 1_000_000 == 0:
                 print(f'stats: {num_docs:,} passages', flush=True)
@@ -97,9 +101,10 @@ def write_collection(path, out_dir, stats, args, docs_per_file=1_000_000, drop=N
                 if target:
                     target.close()
                 target = open(out_dir / f'part{row // docs_per_file:03d}.jsonl', 'w')
-            ids, weights = top_concepts(loads(line), args.max_latents, drop)
+            ids, weights, before_drop = top_concepts(loads(line), args.max_latents, drop)
             if args.weighting == 'bm25':
-                values = passage_factor(weights, doc_length(weights, args.length), stats['avgdl'])
+                length = doc_length(weights if args.renormalize else before_drop, args.length)
+                values = passage_factor(weights, length, stats['avgdl'])
             else:
                 values = weights
             impacts = np.rint(values * args.scale).astype(np.int64)
@@ -138,12 +143,15 @@ def main():
     parser.add_argument('--threads', type=int, default=8)
     parser.add_argument('--keep-collection', action='store_true', help='Keep the intermediate JSON files')
     parser.add_argument('--drop', help='Concept ids to prune (.npy or one id per line), e.g. from p4.prune_df')
+    parser.add_argument('--renormalize', action='store_true',
+                        help='Recompute passage lengths after --drop (changes the scores of the concepts that '
+                             'remain). Default: lengths from before the drop, so pruning only removes postings')
     args = parser.parse_args()
     started = time.time()
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
     drop = load_drop(args.drop) if args.drop else None
-    stats = corpus_stats(args.latents, args.max_latents, args.length, drop=drop)
+    stats = corpus_stats(args.latents, args.max_latents, args.length, drop=drop, renormalize=args.renormalize)
     np.save(out / 'df.npy', stats['df'])
     dropped = write_collection(args.latents, out / 'collection', stats, args, drop=drop)
     run_indexer(out / 'collection', out / 'index', args.threads)
@@ -154,7 +162,8 @@ def main():
             'weighting': args.weighting, 'length': args.length, 'scale': args.scale, 'k1': K1, 'b': B,
             'postings': int(df.sum()), 'used_concepts': int((df > 0).sum()),
             'impacts_rounded_up_to_1': dropped, 'drop_file': args.drop,
-            'pruned_concepts': int(drop.sum()) if drop is not None else 0, 'index_bytes': directory_bytes(out / 'index'),
+            'pruned_concepts': int(drop.sum()) if drop is not None else 0,
+            'renormalize': args.renormalize, 'index_bytes': directory_bytes(out / 'index'),
             'index_gb': round(directory_bytes(out / 'index') / 1e9, 3), 'build_s': round(time.time() - started)}
     (out / 'meta.json').write_text(json.dumps(meta, indent=1))
     print(json.dumps(meta, indent=1))
