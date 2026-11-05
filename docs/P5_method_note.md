@@ -63,7 +63,9 @@ on TREC DL 19/20, mismatch@10/100, average query concepts, postings touched, lat
   TREC DL qrels.
 - **Mismatch subsets:** Pyserini BM25 top 1000 over the prebuilt `msmarco-v1-passage` index
   (`scripts/bm25.sh`), default k1 = 0.9, b = 0.4; the tuned k1 = 0.82, b = 0.68 is the fallback if the dev
-  top-1000 count is outside 900–1,100 (paper: 988). Setting used and our count: *to record after the run*.
+  top-1000 count is outside 900–1,100 (paper: 988). **Used: default k1 = 0.9, b = 0.4** (Pyserini 2.4.0,
+  `scripts/nscc/bm25.pbs`, 3 Nov). Dev mismatch@10/100/1000 = 4,289 / 2,327 / 988 of 6,980 (paper 4.3k / 2.3k
+  / 988); validation = 3,196 / 1,723 / 684 of 5,000. The tuned setting gave 4,198 / 2,243 / 957 on dev.
 
 ## P3 boundary
 Near-miss concepts make part of the expander a learned per-query threshold, which is why T exists. P3's
@@ -73,8 +75,8 @@ threshold first and P5's expansion on top.
 ## Run order
 Paths come from `scripts/nscc/env.sh` (`SAE`, `INDEX`, `STATS`, `CORPUS_DB`, `P5`, `MISMATCH`). `STATS` and
 `CORPUS_DB` come from `p1.prepare corpus --max-concepts` equal to the index's `--max_latents`.
-1. Mismatch subsets (once, local, Java 21): `VALIDATION_TOPICS=$RAW/split/validation.queries.tsv OUT=$RAW/bm25
-   bash scripts/bm25.sh`, then `python -m p5.mismatch --run … --name validation` and `--name dev`.
+1. Mismatch subsets (once): `bash scripts/nscc/bm25_setup.sh` on a login node, then `qsub scripts/nscc/bm25.pbs`
+   (BM25 runs and `p5.mismatch` for both settings), then the `ln -sfn mismatch.<tag> $RAW/bm25/mismatch` it prints.
 2. `qsub -v ROW=prepare scripts/nscc/p5.pbs` (query latents, training groups), then `ROW=train`.
 3. `ROW=B0`, then `ROW=T,PARAM=0.9` … `0.5`, `ROW=N,PARAM=4|8|16`, `ROW=L` (all on validation).
 4. Pick the best T scale and N budget on validation; L's budget is in its checkpoint. Then
