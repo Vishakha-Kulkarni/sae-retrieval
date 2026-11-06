@@ -1,0 +1,9 @@
+gate vs DF, dev MRR@10, Holm over 4 tests
+lambda 0.1: gate 0.3155  DF 0.3087  p=0.0001  holm=0.0004  significant
+lambda 0.4: gate 0.3129  DF 0.2991  p=0.0001  holm=0.0004  significant
+lambda 0.8: gate 0.3073  DF 0.2815  p=0.0001  holm=0.0004  significant
+lambda 1.6: gate 0.2623  DF 0.2094  p=0.0001  holm=0.0004  significant
+
+gate vs full, dev MRR@10 (uncorrected)
+lambda 0.1: gate 0.3155  full 0.3147  p=0.4981
+lambda 0.4: gate 0.3129  full 0.3147  p=0.2002
