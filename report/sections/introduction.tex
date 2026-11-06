@@ -1,0 +1,31 @@
+% Owner: P1. Keep the final introduction around 0.6 pages.
+\section{Introduction}
+Passage retrieval selects evidence for question answering from a large corpus.
+Dense retrievers encode questions and passages into continuous vectors, enabling
+semantic matching beyond exact word overlap. These representations can retrieve
+effectively, but their individual dimensions are difficult to interpret, and
+storing a dense vector for every passage is expensive.
+
+\citet{park-etal-2025-decoding} introduce sparse autoencoders (SAEs) to represent
+dense retrieval embeddings through a small set of active latent concepts.
+Concept-Level Sparse Retrieval (CL-SR) searches these representations with an
+inverted index. This exposes individual matching concepts and offers a route
+to reducing storage. Two objectives remain distinct: reconstructing an embedding
+and ranking relevant passages. A low reconstruction error alone does not ensure
+that the final concept scores preserve the teacher's retrieval preferences.
+
+Our project asks whether explicitly optimizing ranking, together with controlling
+concept usage, improves this quality--efficiency trade-off. We investigate five
+stages independently: learned impact scoring (P1), ranking-aware SAE training
+(P2), adaptive passage sparsity (P3), concept pruning (P4), and query concept
+expansion (P5). Each experiment must use a measured baseline under its own
+controlled protocol. Combining results across stages additionally requires
+compatible checkpoints, corpus statistics, and evaluation settings.
+
+P1 isolates the scoring rule. A small neural network learns each shared concept's
+contribution from dense SimLM scores, while keeping the indexed representations
+fixed. Its additive form permits full-corpus concept retrieval. We evaluate
+against released and validation-tuned BM25, with held-out queries excluded from
+selection. The completed experiment improves top-10 quality, but also exposes
+costs in latency and deeper TREC recall. Reporting these costs is necessary to
+assess whether a ranking gain is practically useful.

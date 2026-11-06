@@ -1,0 +1,10 @@
+{
+  "url": "https://aaai.org/wp-content/uploads/2025/07/AuthorKit26-1.zip",
+  "downloaded": "2026-11-06",
+  "archive_sha256": "d2844ec68a4a9396d749fcca5b5784809617b670863e8d4fecbfb00e444fc3af",
+  "source_directory": "AuthorKit26/CameraReady/LaTeX",
+  "unmodified_style_files": {
+    "aaai2026.sty": "6f90c4d7a36f4a038daf187fdd6cec9fe578aba819733b49551574a37feecd35",
+    "aaai2026.bst": "ac26e2c66047435c0ed25f21ae36ad42d731cf3d794c4a8b5f05a62141a27294"
+  }
+}

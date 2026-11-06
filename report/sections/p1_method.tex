@@ -1,0 +1,29 @@
+% Owner: P1. Verified against p1/model.py and the frozen run protocol.
+\subsection{P1: Learned Impact Scoring}
+For query $q$, passage $d$, and a shared concept $c$, let $q_c$ and $d_c$ denote
+the activation magnitudes. Define the feature vector
+\begin{equation}
+\begin{split}
+\phi_c(q,d)=\big[&\log(1+q_c),\log(1+d_c),\\
+&\mathrm{IDF}_c,\log(1+\ell_d/\bar\ell)\big].
+\end{split}
+\end{equation}
+where $\ell_d$ is the retained passage concept count, $\bar\ell$ its corpus
+mean, and $\mathrm{IDF}_c=\log[(N-\mathrm{df}_c+0.5)/(\mathrm{df}_c+0.5)]$.
+The learned score is
+\begin{equation}
+s_\theta(q,d)=\sum_{c\in\mathrm{supp}(q)\cap\mathrm{supp}(d)}
+f_\theta(\phi_c(q,d)).
+\end{equation}
+The MLP $f_\theta$ has four inputs, 32 ReLU hidden units, and one softplus
+output, totaling 193 trainable parameters. The nonnegative output defines
+each shared concept's contribution. The dense teacher is used for training;
+inference scores postings over the full corpus without a dense candidate filter.
+
+For each training query, SimLM provides scores $t_i$ for 100 dense candidates.
+We minimize $\mathrm{KL}(p_T\|p_\theta)$, where
+$p_T(i)=\mathrm{softmax}(t)_i$ and
+$p_\theta(i)=\mathrm{softmax}(s_\theta)_i$, at temperature one.
+Embeddings, SAE parameters, and passage postings remain fixed. Adam uses
+learning rate $10^{-3}$ for ten epochs. Seeds 42, 43, and 44 use the same
+5,000 training queries; each checkpoint is selected by validation MRR@10.

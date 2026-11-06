@@ -1,0 +1,51 @@
+\subsection{P1: Held-Out Full-Corpus Retrieval}
+Table~\ref{tab:p1-quality} compares scoring methods with identical postings.
+P1 improves dev MRR@10 by 0.0361 (11.1\% relative) over tuned BM25.
+For the predeclared seed 42, improvements over both baselines are significant
+on dev (Holm-adjusted $p=0.0002$). DL20 improves significantly ($p=0.0034$
+versus tuned BM25); DL19 does not ($p=0.1262$). We do not select a seed on test results.
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\hline
+Metric & Released & Tuned & P1 \\
+\hline
+Dev MRR@10 & 0.3158 & 0.3239 & $0.3600 \pm 0.0015$ \\
+DL19 NDCG & 0.6111 & 0.6166 & $0.6502 \pm 0.0047$ \\
+DL20 NDCG & 0.5685 & 0.5727 & $0.6195 \pm 0.0056$ \\
+\hline
+\end{tabular}
+\caption{Full-corpus held-out quality (NDCG@10 on TREC). P1 is mean $\pm$ sample standard deviation over three seeds.}
+\label{tab:p1-quality}
+\end{table}
+\paragraph{Coverage and efficiency.}
+Dev Recall@1000 increases from 0.9463 for tuned BM25 to 0.9520 for P1.
+On DL19 and DL20 it falls from 0.7086/0.7023 to 0.6677/0.6783.
+The shared index occupies 1,688,270,708 bytes (1.572 GiB), with 23.61 concepts
+per passage on average. P1 adds a 152,329-byte primary-seed checkpoint.
+Mean dev warm retrieval latency is 191.81 ms across P1 seeds versus 122.09 ms
+for tuned BM25, approximately 57\% higher. Scoring improves top-10 quality
+while preserving postings; it does not improve speed.
+\paragraph{Vocabulary mismatch.}
+P5 supplied dev subsets derived from lexical BM25 at $k_1=0.9$, $b=0.4$.
+Table~\ref{tab:p1-mismatch} evaluates frozen full-corpus rankings on those IDs.
+MRR@10 and Recall@1000 improve on all subsets. We verified counts, nesting,
+split membership, and ranking checksums. The source lexical run and explicit
+generation rule were not supplied, so construction was not independently
+reproduced. These are secondary descriptive results without further tuning.
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lrrr}
+\hline
+Subset & Queries & Tuned MRR & P1 MRR \\
+\hline
+Top-10 & 4289 & 0.2018 & 0.2408 \\
+Top-100 & 2327 & 0.1385 & 0.1746 \\
+Top-1000 & 988 & 0.1087 & 0.1340 \\
+\hline
+\end{tabular}
+\caption{Supplied dev mismatch subsets. P1 values are three-seed means. Recall@1000 improves from 0.9188/0.8691/0.7677 to 0.9275/0.8847/0.7985.}
+\label{tab:p1-mismatch}
+\end{table}

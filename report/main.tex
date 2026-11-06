@@ -1,0 +1,48 @@
+\documentclass[letterpaper]{article}
+\usepackage[draft]{aaai2026}
+\usepackage{times}
+\usepackage{helvet}
+\usepackage{courier}
+\usepackage[hyphens]{url}
+\usepackage{graphicx}
+\urlstyle{rm}
+\def\UrlFont{\rm}
+\usepackage{natbib}
+\usepackage{caption}
+\usepackage{amsmath}
+\frenchspacing
+\setlength{\pdfpagewidth}{8.5in}
+\setlength{\pdfpageheight}{11in}
+\ifdefined\pdfinfo
+\pdfinfo{/TemplateVersion (2026.1)}
+\fi
+\setcounter{secnumdepth}{0}
+\title{Ranking-Aware Concept-Level Sparse Retrieval\\with Sparse Autoencoders}
+\author{Team Author List Pending}
+\affiliations{Nanyang Technological University\\AI6103 Course Project}
+\newcommand{\pending}[1]{\par\noindent\textbf{Draft---#1}\par}
+\begin{document}
+\maketitle
+\begin{abstract}
+Sparse autoencoders can expose interpretable latent concepts in dense retrieval
+embeddings and support retrieval through an inverted index. However, embedding
+reconstruction does not directly optimize passage ranking, and the released
+concept-level sparse retrieval pipeline uses a fixed BM25-style scoring rule.
+This project investigates modifications to scoring, SAE training, passage
+sparsity, concept pruning, and query expansion. We report a completed scoring
+experiment that freezes the embeddings, SAE, and passage postings and learns
+additive concept impacts by distillation from SimLM. Over 8.84 million passages,
+three seeds achieve MS MARCO dev MRR@10 of $0.3600\pm0.0015$, compared with
+$0.3239$ for validation-tuned concept BM25. Retrieval is slower and TREC
+Recall@1000 decreases, despite improved top-10 ranking.
+\textbf{Draft: team results and combined conclusions remain to be integrated.}
+\end{abstract}
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/base_method}
+\input{sections/methods}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/conclusion}
+\bibliography{references}
+\end{document}

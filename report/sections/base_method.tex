@@ -1,0 +1,16 @@
+% Owner: P3. Target about 0.5 pages; verify against released code.
+\section{Base Retrieval Pipeline}
+SimLM maps a query or passage to a 768-dimensional embedding. A frozen SAE
+encodes each embedding into sparse concept activations. Passage activations
+are stored in posting lists indexed by concept; a query visits lists for its
+active concepts. The final score sums contributions from concepts shared by
+the query and passage. This system retrieves passages; answer generation is
+outside the evaluated pipeline.
+
+For P1, the released BM25-style rule is reproduced with signed concept IDF,
+document length equal to retained concept count, and constants
+$k_1=0.6$, $k_2=1.5$, and $b=2.0$. The tuned baseline changes $k_1$ and $b$
+using validation only. Every P1 method uses the same passage postings and
+corpus statistics.
+\pending{P3: complete the SAE training objective, BatchTopK and inference
+threshold explanation. Distinguish training k=32 from the P1 passage cap of 24.}
