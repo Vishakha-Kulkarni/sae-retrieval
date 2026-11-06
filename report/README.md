@@ -2,7 +2,7 @@
 
 Course requirement supplied by the professor: **at most six content pages, excluding references; AAAI format; LaTeX preferred**. Conference submission limits, copyright transfer, and reproducibility-checklist requirements are not additional course requirements.
 
-This draft uses the official AAAI 2026 author kit, downloaded directly from AAAI. `aaai2026.sty` and `aaai2026.bst` are unchanged; download provenance and hashes are in `author-kit-source.json`. The supported `draft` option retains the author block without claiming AAAI publication copyright. Replace the author placeholder with the agreed team names and order.
+This draft uses the official AAAI 2026 author kit, downloaded directly from AAAI. `aaai2026.sty` and `aaai2026.bst` are unchanged; download provenance and hashes are in `author-kit-source.json`. The supported `draft` option retains the author block without claiming AAAI publication copyright. Four supplied names and student IDs are included in provisional supplied order. P1 author details are still pending; confirm the final author order before submission.
 
 ## Edit and build
 
