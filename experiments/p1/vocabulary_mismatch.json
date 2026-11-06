@@ -1,0 +1,184 @@
+{
+  "date": "2026-11-06",
+  "scope": "Secondary descriptive evaluation on P5-supplied MS MARCO dev vocabulary-mismatch subsets; frozen P1 models and existing full-corpus rankings, no retraining or selection",
+  "archive_sha256": "532d88f15eacd3c6887a55e74779c89f388798ece946f8183c3c46dfaafa115b",
+  "subset_file_sha256": {
+    "dev.mismatch_10.qids": "51e8b02b9669b621271f02a48f66af48f4630b1ba07d554b2d39df2fbef5d541",
+    "dev.mismatch_100.qids": "6e369a5a0b859928c9c33aca8d9ea380f848d34cae97b5ed3072ad5eb5625589",
+    "dev.mismatch_1000.qids": "0237677737835c8411345be5988a79a22d8d707fdb1e2e67489a4b6e484cf800",
+    "dev.mismatch.json": "1a96d39a33cb95b3b04c51ec50f45b0e61e1422b3cfda229e19af80097a5febe",
+    "validation.mismatch_10.qids": "a5af15b98f999c211352a246d2eb43190a9db7620affb33bc290c58253a6328a",
+    "validation.mismatch_100.qids": "39edff026d206102fa4002db63547d9b391ad374c0520613069921ab66392fc2",
+    "validation.mismatch_1000.qids": "20338cd1cb4a741c645e260efc092076eaa8ceefe05f8a5384ae304089346db1",
+    "validation.mismatch.json": "e88d34ab55883c67a0bd5c364558060bcd10925a1ef2110b67679b3a2e432768"
+  },
+  "p5_metadata": {
+    "dev": {
+      "run": "/home/users/ntu/kushhema/scratch/sae/raw/bm25/bm25.dev.k0.9_b0.4.trec",
+      "qrels": "/home/users/ntu/kushhema/scratch/sae/raw/qrels.dev.small.tsv",
+      "counts": {
+        "10": 4289,
+        "100": 2327,
+        "1000": 988
+      },
+      "labeled_queries": 6980,
+      "unlabeled_excluded": 0,
+      "paper_dev_counts": {
+        "10": 4300,
+        "100": 2300,
+        "1000": 988
+      }
+    },
+    "validation": {
+      "run": "/home/users/ntu/kushhema/scratch/sae/raw/bm25/bm25.validation.k0.9_b0.4.trec",
+      "qrels": "/home/users/ntu/kushhema/scratch/sae/raw/split/validation.qrels",
+      "counts": {
+        "10": 3196,
+        "100": 1723,
+        "1000": 684
+      },
+      "labeled_queries": 5000,
+      "unlabeled_excluded": 0,
+      "paper_dev_counts": {
+        "10": 4300,
+        "100": 2300,
+        "1000": 988
+      }
+    }
+  },
+  "provenance_limits": "IDs, counts, nesting and split membership verified. Archive does not include lexical BM25 run, corpus/index hash or explicit subset-generation rule; lexical failure membership cannot be independently recomputed. k0.9_b0.4 identifies P5 lexical BM25 settings, separate from concept BM25 tuning.",
+  "subsets": {
+    "10": {
+      "num_queries": 4289,
+      "metrics": {
+        "released_bm25": {
+          "mrr_at_10": 0.19581922378028696,
+          "ndcg_at_10": 0.24503980299839742,
+          "recall_at_1000": 0.9198336830652055
+        },
+        "tuned_bm25": {
+          "mrr_at_10": 0.2017914043677625,
+          "ndcg_at_10": 0.25224693474408866,
+          "recall_at_1000": 0.9188233465454263
+        },
+        "learned_s42": {
+          "mrr_at_10": 0.23991597182900518,
+          "ndcg_at_10": 0.2949642788776329,
+          "recall_at_1000": 0.9294124504546515
+        },
+        "learned_s43": {
+          "mrr_at_10": 0.2408387828590673,
+          "ndcg_at_10": 0.2956786515719445,
+          "recall_at_1000": 0.9255459703116499
+        },
+        "learned_s44": {
+          "mrr_at_10": 0.2416573219790753,
+          "ndcg_at_10": 0.2956585801684084,
+          "recall_at_1000": 0.9276249319965805
+        }
+      },
+      "learned_three_seed_summary": {
+        "mrr_at_10": {
+          "mean": 0.24080402555571592,
+          "sample_std": 0.0008711952358051015
+        },
+        "ndcg_at_10": {
+          "mean": 0.29543383687266195,
+          "sample_std": 0.00040677296902787586
+        },
+        "recall_at_1000": {
+          "mean": 0.9275277842542939,
+          "sample_std": 0.0019350698790818839
+        }
+      }
+    },
+    "100": {
+      "num_queries": 2327,
+      "metrics": {
+        "released_bm25": {
+          "mrr_at_10": 0.13342576107939236,
+          "ndcg_at_10": 0.17073652294052385,
+          "recall_at_1000": 0.8705414697034809
+        },
+        "tuned_bm25": {
+          "mrr_at_10": 0.13847603358776545,
+          "ndcg_at_10": 0.17651651580176886,
+          "recall_at_1000": 0.8691090101704627
+        },
+        "learned_s42": {
+          "mrr_at_10": 0.17407316457595787,
+          "ndcg_at_10": 0.2160723786453346,
+          "recall_at_1000": 0.8868356968915627
+        },
+        "learned_s43": {
+          "mrr_at_10": 0.17415501940641606,
+          "ndcg_at_10": 0.2162328986142645,
+          "recall_at_1000": 0.8823234493625555
+        },
+        "learned_s44": {
+          "mrr_at_10": 0.17556820894809722,
+          "ndcg_at_10": 0.217699408790056,
+          "recall_at_1000": 0.8850451224752901
+        }
+      },
+      "learned_three_seed_summary": {
+        "mrr_at_10": {
+          "mean": 0.17459879764349037,
+          "sample_std": 0.0008405318324977214
+        },
+        "ndcg_at_10": {
+          "mean": 0.21666822868321836,
+          "sample_std": 0.0008966275562682474
+        },
+        "recall_at_1000": {
+          "mean": 0.8847347562431361,
+          "sample_std": 0.0022720783083564964
+        }
+      }
+    },
+    "1000": {
+      "num_queries": 988,
+      "metrics": {
+        "released_bm25": {
+          "mrr_at_10": 0.10381000578369,
+          "ndcg_at_10": 0.133181399655044,
+          "recall_at_1000": 0.7717611336032388
+        },
+        "tuned_bm25": {
+          "mrr_at_10": 0.10867794486215539,
+          "ndcg_at_10": 0.13835962203704172,
+          "recall_at_1000": 0.7677125506072875
+        },
+        "learned_s42": {
+          "mrr_at_10": 0.13231034316560633,
+          "ndcg_at_10": 0.1638393447901406,
+          "recall_at_1000": 0.7974865047233468
+        },
+        "learned_s43": {
+          "mrr_at_10": 0.13290116316432107,
+          "ndcg_at_10": 0.16593595948590953,
+          "recall_at_1000": 0.795462213225371
+        },
+        "learned_s44": {
+          "mrr_at_10": 0.13679631771737033,
+          "ndcg_at_10": 0.16989320162560853,
+          "recall_at_1000": 0.802547233468286
+        }
+      },
+      "learned_three_seed_summary": {
+        "mrr_at_10": {
+          "mean": 0.1340026080157659,
+          "sample_std": 0.0024373915340686054
+        },
+        "ndcg_at_10": {
+          "mean": 0.16655616863388623,
+          "sample_std": 0.003074213750946891
+        },
+        "recall_at_1000": {
+          "mean": 0.7984986504723346,
+          "sample_std": 0.003649343396218624
+        }
+      }
+    }
+  }
+}
