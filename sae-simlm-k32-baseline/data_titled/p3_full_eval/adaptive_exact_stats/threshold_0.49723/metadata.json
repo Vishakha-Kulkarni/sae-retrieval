@@ -1,0 +1,11 @@
+{
+  "threshold": 0.49723,
+  "min_concepts": 8,
+  "max_concepts": 128,
+  "num_docs": 8841823,
+  "avg_doc_length": 32.577632915745994,
+  "latent_dim": 24576,
+  "statistics_scope": "full_corpus",
+  "selection": "activation_threshold_with_minimum_fallback",
+  "cache": "../../top128_cache"
+}

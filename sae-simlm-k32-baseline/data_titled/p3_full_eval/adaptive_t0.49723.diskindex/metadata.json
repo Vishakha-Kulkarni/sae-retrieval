@@ -1,0 +1,18 @@
+{
+  "format": "fixed_disk_v1",
+  "selection": "activation_threshold_with_minimum_fallback",
+  "threshold": 0.49723,
+  "min_concepts": 8,
+  "max_concepts": 128,
+  "num_docs": 8841823,
+  "latent_dim": 24576,
+  "k": 128,
+  "shard_count": 256,
+  "terms_per_shard": 96,
+  "avgdl": 32.577632915745994,
+  "total_postings": 288045664,
+  "statistics_scope": "full_corpus",
+  "record_dtype": "term:uint16,docid:uint32,weight:float32",
+  "record_bytes": 10,
+  "completed": true
+}

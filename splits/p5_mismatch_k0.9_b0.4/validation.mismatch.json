@@ -1,0 +1,16 @@
+{
+  "run": "/home/users/ntu/kushhema/scratch/sae/raw/bm25/bm25.validation.k0.9_b0.4.trec",
+  "qrels": "/home/users/ntu/kushhema/scratch/sae/raw/split/validation.qrels",
+  "counts": {
+    "10": 3196,
+    "100": 1723,
+    "1000": 684
+  },
+  "labeled_queries": 5000,
+  "unlabeled_excluded": 0,
+  "paper_dev_counts": {
+    "10": 4300,
+    "100": 2300,
+    "1000": 988
+  }
+}

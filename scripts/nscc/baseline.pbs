@@ -1,7 +1,8 @@
 #!/bin/bash
 # B0: train the SAE with the unchanged upstream objective (MSE + dead-latent aux, k=32, x32, lr 5e-5,
 # batch 4096). Upstream ships no trained checkpoint, so this is the baseline every P2 row starts from.
-# qsub -P personal-riddhima scripts/nscc/baseline.pbs     (STEPS=... to change; 200k steps ~ 88 passes)
+# qsub -P personal-riddhima scripts/nscc/baseline.pbs   (defaults: K=32, STEPS=228000 = 100 epochs over
+# 8.84M passages + 0.50M train queries at batch 4096, as the paper; DECODER_NORM=row|atom)
 #PBS -N p2_B0
 #PBS -q normal
 #PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
@@ -10,5 +11,5 @@
 source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
 set -euo pipefail
 python -m p2.train --data-dir "$DATA" --val-qrels "$RAW/split/validation.qrels" \
-    --output "$CKPT/B0_upstream_objective" --rank-loss none --steps "${STEPS:-200000}" \
-    --eval-every 20000 --in-ram --device cuda
+    --output "$CKPT/${NAME:-B0_upstream_objective}" --rank-loss none --steps "${STEPS:-228000}" --k "${K:-32}" \
+    --eval-every 20000 --in-ram --decoder-norm "${DECODER_NORM:-row}" --device cuda

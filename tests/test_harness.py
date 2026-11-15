@@ -30,8 +30,10 @@ class MetricTests(unittest.TestCase):
         self.assertEqual(scores['q2'], {'mrr_at_10': 0., 'ndcg_at_10': 0., 'recall_at_1000': 0.})
         self.assertEqual(scores['q1']['mrr_at_10'], 1.)
 
-    def test_per_query_skips_queries_without_positive_labels(self):
-        self.assertEqual(set(per_query({}, {'q1': {'a': 1}, 'q2': {'a': 0}})), {'q1'})
+    def test_per_query_scores_queries_without_positive_labels_as_zero(self):
+        # main's p1.metrics (P1) keeps these queries in the denominator; every MS MARCO and TREC DL query has one.
+        scores = per_query({'q2': ['a']}, {'q1': {'a': 1}, 'q2': {'a': 0}})
+        self.assertEqual(scores['q2'], {'mrr_at_10': 0., 'ndcg_at_10': 0., 'recall_at_1000': 0.})
 
     def test_duplicate_ranked_document(self):
         with self.assertRaises(ValueError):

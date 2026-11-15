@@ -8,7 +8,7 @@ import random
 import torch
 from torch.nn import functional as F
 
-from .data import load_groups, load_stats
+from .data import IndexedGroups, load_stats
 from .metrics import evaluate, read_qrels
 from .model import ImpactScorer, score_group
 
@@ -25,31 +25,36 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--temperature', type=float, default=1.)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--device', default='cpu')
+    parser.add_argument('--threads', type=int, default=1)
     args = parser.parse_args()
-    if args.epochs < 1 or args.hidden < 1 or args.lr <= 0 or args.temperature <= 0:
+    if args.epochs < 1 or args.hidden < 1 or args.lr <= 0 or args.temperature <= 0 or args.threads < 1:
         parser.error('epochs, hidden, lr and temperature must be positive')
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    train = load_groups(args.train, require_teacher=True)
-    validation = load_groups(args.validation)
-    if {g['qid'] for g in train} & {g['qid'] for g in validation}:
+    torch.set_num_threads(args.threads)
+    train = IndexedGroups(args.train, require_teacher=True)
+    validation = IndexedGroups(args.validation)
+    if train.qids & validation.qids:
         raise ValueError('Train and validation query IDs overlap')
     stats = load_stats(args.stats)
     qrels = read_qrels(args.qrels)
-    if set(qrels) != {g['qid'] for g in validation}:
+    if set(qrels) != validation.qids:
         raise ValueError('Validation qrels and validation candidate query IDs must match')
-    model = ImpactScorer(args.hidden)
+    model = ImpactScorer(args.hidden).to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     best = -1.
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     for epoch in range(args.epochs):
         model.train()
-        random.shuffle(train)
+        order = list(range(len(train)))
+        random.shuffle(order)
         total = 0.
-        for group in train:
+        for index in order:
+            group = train[index]
             optimizer.zero_grad()
             scores = score_group(model, group, stats)
-            teacher = torch.tensor([float(d['teacher_score']) for d in group['candidates']])
+            teacher = torch.tensor([float(d['teacher_score']) for d in group['candidates']], device=args.device)
             temperature = args.temperature
             loss = F.kl_div(F.log_softmax(scores / temperature, dim=0),
                             F.softmax(teacher / temperature, dim=0), reduction='sum') * temperature ** 2
@@ -66,7 +71,7 @@ def main():
                 run[group['qid']] = [d['docid'] for _, d in sorted(
                     zip(scores, group['candidates']), key=lambda x: (-x[0], x[1]['docid']))]
             metrics = evaluate(run, qrels)
-        print(json.dumps({'epoch': epoch + 1, 'loss': total / len(train), **metrics}))
+        print(json.dumps({'epoch': epoch + 1, 'loss': total / len(train), **metrics}), flush=True)
         if metrics['mrr_at_10'] > best:
             best = metrics['mrr_at_10']
             torch.save({'format_version': 2, 'state_dict': model.state_dict(), 'hidden': args.hidden,

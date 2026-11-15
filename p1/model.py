@@ -14,9 +14,13 @@ class ImpactScorer(nn.Module):
 
 def score_group(model, group, stats):
     from .data import features
-    scores = []
-    for doc in group['candidates']:
-        rows = features(group['query'], doc['concepts'], stats)
-        tensor = torch.tensor(rows, dtype=torch.float32).reshape(-1, 4)
-        scores.append(model(tensor))
-    return torch.stack(scores)
+    rows, owners = [], []
+    for index, doc in enumerate(group['candidates']):
+        matches = features(group['query'], doc['concepts'], stats)
+        rows.extend(matches)
+        owners.extend([index] * len(matches))
+    device = next(model.parameters()).device
+    tensor = torch.tensor(rows, dtype=torch.float32, device=device).reshape(-1, 4)
+    impacts = model.network(tensor).reshape(-1)
+    indices = torch.tensor(owners, dtype=torch.long, device=device)
+    return impacts.new_zeros(len(group['candidates'])).index_add(0, indices, impacts)

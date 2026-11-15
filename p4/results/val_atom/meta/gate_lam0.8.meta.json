@@ -1,0 +1,19 @@
+{
+ "num_docs": 8841823,
+ "avgdl": 23.609834985387064,
+ "max_latents": 24,
+ "weighting": "bm25",
+ "length": "count",
+ "scale": 100.0,
+ "k1": 0.6,
+ "b": 2.0,
+ "postings": 143094853,
+ "used_concepts": 17941,
+ "impacts_rounded_up_to_1": 0,
+ "drop_file": "/scratch/users/ntu/mohit011/p4/data/drops/gate/gate_lam0.8.drop.npy",
+ "pruned_concepts": 6635,
+ "renormalize": false,
+ "index_bytes": 519296555,
+ "index_gb": 0.519,
+ "build_s": 830
+}

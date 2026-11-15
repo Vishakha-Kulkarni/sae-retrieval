@@ -1,0 +1,16 @@
+{
+  "run": "/home/users/ntu/kushhema/scratch/sae/raw/bm25/bm25.dev.k0.9_b0.4.trec",
+  "qrels": "/home/users/ntu/kushhema/scratch/sae/raw/qrels.dev.small.tsv",
+  "counts": {
+    "10": 4289,
+    "100": 2327,
+    "1000": 988
+  },
+  "labeled_queries": 6980,
+  "unlabeled_excluded": 0,
+  "paper_dev_counts": {
+    "10": 4300,
+    "100": 2300,
+    "1000": 988
+  }
+}

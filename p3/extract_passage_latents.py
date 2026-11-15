@@ -52,6 +52,13 @@ def main() -> None:
     parser.add_argument("--input-dim", type=int, default=768)
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--max-docs", type=int, help="Optional prefix limit for a small run")
+
+    parser.add_argument(
+    "--resume",
+    action="store_true",
+    help="Validate existing JSONL output and resume from the next document",
+    )
+
     args = parser.parse_args()
 
     from p2.sae import load_sae
@@ -62,10 +69,71 @@ def main() -> None:
         parser.error("--k is required for fixed mode")
 
     dataset = NpyEmbeddingDataset(args.input_embeddings)
-    total_docs = min(len(dataset), args.max_docs) if args.max_docs is not None else len(dataset)
+    total_docs = (
+        min(len(dataset), args.max_docs)
+        if args.max_docs is not None
+        else len(dataset)
+    )
+
     if args.max_docs is not None:
         dataset = torch.utils.data.Subset(dataset, range(total_docs))
-    loader = DataLoader(dataset, batch_size=args.batch_size, num_workers=0, shuffle=False)
+
+    resume_count = 0
+
+    if args.resume:
+        if not os.path.isfile(args.output):
+            parser.error(
+                f"--resume requested but output file does not exist: {args.output}"
+            )
+
+        with open(args.output, "r", encoding="utf-8") as existing_file:
+            for expected_docid, line in enumerate(existing_file):
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    parser.error(
+                        f"Invalid JSON on output line {expected_docid + 1}: {exc}"
+                    )
+
+                if not isinstance(record, dict):
+                    parser.error(
+                        f"Invalid record on output line {expected_docid + 1}: "
+                        "expected a JSON object"
+                    )
+
+                if record.get("docid") != expected_docid:
+                    parser.error(
+                        f"Unexpected docid on line {expected_docid + 1}: "
+                        f"expected {expected_docid}, got {record.get('docid')}"
+                    )
+
+                if not isinstance(record.get("ids"), list) or not isinstance(
+                    record.get("weight"), list
+                ):
+                    parser.error(
+                        f"Missing or invalid ids/weight on line {expected_docid + 1}"
+                    )
+                if len(record["ids"]) != len(record["weight"]):
+                    parser.error(
+                        f"IDs and weights differ in length on line {expected_docid + 1}"
+                    )
+
+                resume_count = expected_docid + 1
+
+        if resume_count > total_docs:
+            parser.error(
+                f"Output contains {resume_count} records, "
+                f"but input contains only {total_docs} documents"
+            )
+
+        dataset = torch.utils.data.Subset(
+            dataset, range(resume_count, total_docs)
+        )
+
+    loader = DataLoader(
+        dataset, batch_size=args.batch_size, num_workers=0, shuffle=False
+    )
+
 
     model, _ = load_sae(args.checkpoint, map_location=args.device)
     if model.linear.in_features != args.input_dim:
@@ -75,8 +143,10 @@ def main() -> None:
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     encode = encode_adaptive_batch if args.mode == "adaptive" else encode_fixed_k_batch
-    with open(args.output, "w", encoding="utf-8") as output_file:
-        doc_offset = 0
+    output_mode = "a" if args.resume else "w"
+
+    with open(args.output, output_mode, encoding="utf-8") as output_file:
+        doc_offset = resume_count
         for batch in tqdm(loader, desc=f"Encoding {args.mode} passages"):
             batch = batch.to(args.device)
             if args.mode == "adaptive":

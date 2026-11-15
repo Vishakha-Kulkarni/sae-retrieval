@@ -1,11 +1,6 @@
 """Evaluate fixed candidate sets against independent TREC qrels."""
 import math
-
-import numpy as np
-
 METRICS = ('mrr_at_10', 'ndcg_at_10', 'recall_at_1000')
-# exponential: 2^r - 1 (default, P1's original); linear: r, as trec_eval / upstream cl-sr/evaluate.py.
-GAINS = {'exponential': lambda r: 2 ** max(0, r) - 1, 'linear': lambda r: max(0, r)}
 
 
 def read_qrels(path):
@@ -22,58 +17,51 @@ def read_qrels(path):
 
 
 def per_query(run, qrels, gain='exponential'):
-    """Metrics for every qrels query with a positive label; a query absent from the run scores zero."""
-    if gain not in GAINS:
-        raise ValueError(f'Unknown gain {gain!r}; choose from {sorted(GAINS)}')
-    to_gain = GAINS[gain]
-
-    def dcg(grades):
-        return sum(to_gain(r) / math.log2(i + 2) for i, r in enumerate(grades))
-
+    if gain not in ('linear', 'exponential'):
+        raise ValueError('gain must be linear or exponential')
     scores = {}
     for qid, judgments in qrels.items():
         relevant = {d for d, r in judgments.items() if r > 0}
-        if not relevant:
-            continue
         ranking = run.get(qid, [])
         if len(ranking) != len(set(ranking)):
             raise ValueError(f'{qid}: duplicate ranked document')
+        mrr = next((1 / i for i, d in enumerate(ranking[:10], 1) if d in relevant), 0.)
+        def dcg(grades):
+            return sum(((2 ** max(0, r) - 1) if gain == 'exponential' else max(0, r)) / math.log2(i + 2)
+                       for i, r in enumerate(grades))
         ideal = dcg(sorted(judgments.values(), reverse=True)[:10])
-        scores[qid] = {
-            'mrr_at_10': next((1 / i for i, d in enumerate(ranking[:10], 1) if d in relevant), 0.),
-            'ndcg_at_10': dcg([judgments.get(d, 0) for d in ranking[:10]]) / ideal,
-            'recall_at_1000': len(set(ranking[:1000]) & relevant) / len(relevant)}
+        scores[qid] = {'mrr_at_10': mrr,
+                       'ndcg_at_10': dcg([judgments.get(d, 0) for d in ranking[:10]]) / ideal if ideal else 0.,
+                       'recall_at_1000': len(set(ranking[:1000]) & relevant) / len(relevant) if relevant else 0.}
     return scores
 
 
 def evaluate(run, qrels, gain='exponential'):
-    scores = per_query(run, qrels, gain)
-    if not scores:
-        raise ValueError('No queries with positive relevance judgments')
-    return {**{k: sum(s[k] for s in scores.values()) / len(scores) for k in METRICS},
-            'num_queries': len(scores)}
+    rows = per_query(run, qrels, gain)
+    if not rows:
+        raise ValueError('Empty evaluation query set')
+    return {**{m: sum(r[m] for r in rows.values()) / len(rows) for m in METRICS}, 'num_queries': len(rows)}
 
 
-def randomization_test(a, b, permutations=10_000, seed=0, chunk=1000):
-    """Two-sided paired approximate randomisation over per-query scores (sign flips of differences)."""
-    if set(a) != set(b) or not a:
-        raise ValueError('Paired test needs the same non-empty query set in both runs')
-    qids = sorted(a)
-    diff = np.array([b[q] - a[q] for q in qids])
-    observed = abs(diff.mean())
-    rng = np.random.default_rng(seed)
-    extreme = 0
-    for start in range(0, permutations, chunk):
-        signs = rng.choice((-1., 1.), size=(min(chunk, permutations - start), len(diff)))
-        extreme += int((np.abs(signs @ diff / len(diff)) >= observed - 1e-12).sum())
+def randomization_test(a, b, permutations=10000, seed=0):
+    import numpy as np
+    if set(a) != set(b) or not a or permutations < 1:
+        raise ValueError('Paired tests need the same nonempty query IDs and positive permutation count')
+    delta = np.array([b[q] - a[q] for q in sorted(a)], dtype=np.float64)
+    if not np.isfinite(delta).all():
+        raise ValueError('Nonfinite per-query scores')
+    observed = abs(delta.mean())
+    rng, extreme = np.random.default_rng(seed), 0
+    for start in range(0, permutations, 256):
+        signs = rng.integers(0, 2, size=(min(256, permutations - start), len(delta)), dtype=np.int8) * 2 - 1
+        extreme += int(np.count_nonzero(np.abs((signs * delta).mean(1)) >= observed - 1e-15))
     return (extreme + 1) / (permutations + 1)
 
 
-def holm(p_values):
-    """Holm step-down adjusted p-values, in input order; adjusted < alpha controls family-wise error at alpha."""
-    m = len(p_values)
-    adjusted, running = [0.] * m, 0.
-    for rank, i in enumerate(sorted(range(m), key=lambda i: p_values[i])):
-        running = max(running, min(1., (m - rank) * p_values[i]))
-        adjusted[i] = running
+def holm(pvalues):
+    order = sorted(range(len(pvalues)), key=lambda i: pvalues[i])
+    adjusted, maximum = [0.] * len(order), 0.
+    for rank, index in enumerate(order):
+        maximum = max(maximum, min(1., (len(order) - rank) * pvalues[index]))
+        adjusted[index] = maximum
     return adjusted

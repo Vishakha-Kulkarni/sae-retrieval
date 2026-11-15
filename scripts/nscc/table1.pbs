@@ -1,0 +1,14 @@
+#!/bin/bash
+# Paper Table 1 check for an SAE checkpoint: NMSE and full-corpus dense retrieval with reconstructions
+# on MS MARCO dev (target for k=32: NMSE 0.1903, MRR@10 0.328, Recall@1k 0.964).
+# qsub -P personal-riddhima -v CKPT_PATH=$HOME/scratch/sae/p2/B0_upstream_objective/last.pt scripts/nscc/table1.pbs
+#PBS -N p2_table1
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=64gb
+#PBS -l walltime=03:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+python -m p2.evaluate table1 --checkpoint "$CKPT_PATH" --passages "$DATA/passages.npy" \
+    --queries "$DATA/dev_queries.npy" --qrels "$RAW/qrels.dev.small.tsv" --device cuda \
+    ${RECON_QUERIES:+--reconstruct-queries} | tee "${CKPT_PATH%.pt}.table1${RECON_QUERIES:+_reconq}.json"
