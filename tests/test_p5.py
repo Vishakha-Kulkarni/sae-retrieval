@@ -12,7 +12,10 @@ from p1.prepare import build_corpus
 from p2.evaluate import export
 from p2.sae import SAE, load_sae
 from p5.bm25 import doc_terms, scores
-from p5.evaluate import evaluate_row, retrieve
+from p5.evaluate import evaluate_row
+from p5.example import (added_concepts, describe, first_relevant, miss_overlap, movement, pick_example, read_tsv,
+                        sources)
+from p5.fastindex import FastIndex
 from p5.expand import expand_neighbours, expand_threshold, write_expanded, write_learned
 from p5.harness import read_run
 from p5.model import load_expander
@@ -57,12 +60,43 @@ class Fixture(unittest.TestCase):
 class RowEvaluatorTests(Fixture):
     def test_run_matches_upstream_main(self):
         upstream = upstream_functions('latent_retrieve.py')
+        fast = FastIndex.from_index(self.index)
         for qid, query in self.queries.items():
             official = upstream['retrieve_one']([str(c) for c in query['ids']], query['weight'],
                                                 self.index['inverted_index'], self.index['document_lengths'],
                                                 self.index['avgdl'])
-            ours, _ = retrieve(query, self.index, upstream)
+            ours, _ = fast.retrieve([str(c) for c in query['ids']], query['weight'])
             self.assertEqual(ours, official)
+
+    def test_fast_retrieval_is_identical_beyond_top_k_with_ties_and_negative_idf(self):
+        rng = np.random.default_rng(0)
+        # 3,000 passages (> TOP_K), weights on a coarse grid for many exact ties; concept 0 is in every passage
+        # (negative IDF) and concept 1 in most of them.
+        passages = []
+        for d in range(3000):
+            ids = [0] + ([1] if rng.random() < .8 else []) + list(rng.choice(np.arange(2, 40), 3, replace=False))
+            passages.append({'docid': d * 7 + 3, 'ids': [int(c) for c in ids],
+                             'weight': [float(w) for w in rng.integers(1, 4, len(ids)) / 2]})
+        (self.root / 'big').mkdir()
+        index_path = build_index(self.root / 'big', passages)
+        with open(index_path, 'rb') as source:
+            index = pickle.load(source)
+        retrieve_one = upstream_functions('latent_retrieve.py')['retrieve_one']
+        fast = FastIndex.load(index_path)
+        queries = [['0'], ['1', '0'], ['5', '1', '77'], ['3', '3', '9'], ['99']] + \
+                  [[str(c) for c in rng.choice(40, 4, replace=False)] for _ in range(20)]
+        for terms in queries:
+            weights = [float(w) for w in rng.integers(1, 5, len(terms)) / 4]
+            official = retrieve_one(terms, weights, index['inverted_index'], index['document_lengths'],
+                                    index['avgdl'])
+            self.assertEqual(fast.retrieve(terms, weights)[0], official, terms)
+        cached = FastIndex.load(index_path)  # second load reads the .fast.npz cache
+        self.assertEqual(cached.retrieve(['1', '0'], [.5, .25]), fast.retrieve(['1', '0'], [.5, .25]))
+        self.assertTrue(index_path.with_name('index.pkl.fast.npz').exists())
+
+    def test_upstream_check_passes_on_identical_retrieval(self):
+        row = evaluate_row('B0', self.query_path, self.index_path, self.qrels_path, upstream_checks=3)
+        self.assertEqual(row['metrics']['all']['num_queries'], 3)
 
     def test_row_result(self):
         row = evaluate_row('B0', self.query_path, self.index_path, self.qrels_path,
@@ -303,6 +337,46 @@ class BM25Tests(unittest.TestCase):
         self.assertEqual(weights.grad[2].item(), 0.)
 
 
+class ExampleTests(unittest.TestCase):
+    QRELS = {'a': {'d1': 1}, 'b': {'d2': 1}, 'c': {'d3': 1}, 'd': {'d4': 1, 'd5': 0}}
+    BASELINE = {'a': ['x', 'd1'], 'b': ['x', 'y'], 'c': ['d3'], 'd': ['d5', 'x']}
+    RUN = {'a': ['d1'], 'b': ['d2'], 'c': ['x', 'd3']}  # d: missing from the run
+
+    def test_added_concepts_requires_the_original_prefix(self):
+        original = {'q': {'ids': [3, 1], 'weight': [.5, .2]}}
+        self.assertEqual(added_concepts(original, {'q': {'ids': [3, 1, 7], 'weight': [.5, .2, .1]}}), {'q': [(7, .1)]})
+        with self.assertRaises(ValueError):
+            added_concepts(original, {'q': {'ids': [1, 3, 7], 'weight': [.2, .5, .1]}})
+
+    def test_movement_counts_each_kind_and_ignores_zero_relevance(self):
+        self.assertIsNone(first_relevant(['d5'], {'d4'}))
+        self.assertEqual(first_relevant(['x', 'd1'], {'d1'}), 2)
+        self.assertEqual(movement(self.BASELINE, self.RUN, self.QRELS, sorted(self.QRELS)),
+                         {'up': 1, 'down': 1, 'same': 0, 'found': 1, 'lost': 0, 'missed_both': 1})
+
+    def test_pick_example_takes_the_largest_reciprocal_rank_gain(self):
+        self.assertEqual(pick_example(self.BASELINE, self.RUN, self.QRELS, ['a', 'b', 'c']), ('b', None, 1))
+        self.assertIsNone(pick_example(self.BASELINE, self.RUN, self.QRELS, ['c', 'd']))
+
+    def test_miss_overlap_and_text_lookups(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            passages = root / 'p.jsonl'
+            passages.write_text(''.join(json.dumps(p) + '\n' for p in (
+                {'docid': 'd2', 'ids': [7, 8], 'weight': [.5, .4]}, {'docid': 'd4', 'ids': [9], 'weight': [.3]})))
+            build_corpus(passages, root / 'corpus.db', root / 'stats.json')
+            original = {'b': {'ids': [8], 'weight': [.3]}, 'd': {'ids': [1], 'weight': [.3]}}
+            added = {'b': [(7, .1)], 'd': [(2, .1)]}
+            self.assertEqual(miss_overlap(self.BASELINE, original, added, self.QRELS, root / 'corpus.db'),
+                             {'missed': 2, 'shares_original': 1, 'shares_added': 1, 'shares_neither': 1})
+            (root / 'q.tsv').write_text('q1\tfirst query\nq2\tsecond\tpart\n')
+            self.assertEqual(read_tsv(root / 'q.tsv', {'q2'}), {'q2': 'second | part'})
+            (root / 'q.json').write_text(json.dumps({'q1': {'ids': [7], 'weight': [.2]},
+                                                     'q2': {'ids': [7, 9], 'weight': [.9, .1]}}))
+            self.assertEqual(describe([7, 9], root / 'q.json', root / 'q.tsv', per_concept=1),
+                             {7: ['second | part'], 9: ['second | part']})
+
+
 class LearnedExpanderTests(unittest.TestCase):
     """One query whose teacher-preferred passage only wins once near-miss concept 1 is added."""
 
@@ -379,6 +453,22 @@ class LearnedExpanderTests(unittest.TestCase):
         self.assertEqual(len(write_learned(*args, self.root / 'L5.json', budget=5)['v1']['ids']), 3)  # pool {1, 2}
         with self.assertRaises(FileExistsError):
             write_learned(*args, self.root / 'L.json')
+
+    def test_sources_label_every_added_concept(self):
+        self.train()
+        queries = self.root / 'val.query.json'
+        queries.write_text(json.dumps({'v1': {'ids': [0], 'weight': [.9]}}))
+        expanded = write_learned(queries, self.root / 'val.npy', self.checkpoint, self.stats_path,
+                                 self.root / 'expander.pt', self.root / 'L5.json', budget=5)
+        original = json.loads(queries.read_text())
+        added = added_concepts(original, expanded)
+        per_query, totals = sources(original, added, self.root / 'val.npy', self.checkpoint, self.stats_path,
+                                    self.root / 'expander.pt')
+        self.assertEqual(set(per_query['v1']), {1, 2})
+        self.assertIn(per_query['v1'][1], ('near_miss', 'both'))  # pre-activation .25 is below threshold .3
+        self.assertNotIn('other', per_query['v1'].values())
+        self.assertEqual(sum(totals['count'].values()), 2)
+        self.assertAlmostEqual(sum(totals['weight'].values()), sum(expanded['v1']['weight'][1:]), places=6)
 
     def test_learned_expansion_refuses_another_sae(self):
         self.train(steps=2, eval_every=1)

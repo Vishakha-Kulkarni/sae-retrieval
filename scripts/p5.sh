@@ -84,7 +84,7 @@ dl20) QRELS=$RAW/2020qrels-pass.txt; SUBSET= ;;
 *) echo "unknown SPLIT=$SPLIT" >&2; exit 2 ;;
 esac
 
-NAME=$ROW${PARAM:-}
+NAME=${NAME:-$ROW${PARAM:-}}  # NAME=L_s1 EXPANDER=… keeps extra training seeds apart
 ROW_QUERIES=$P5/$NAME.$SPLIT.query.json
 case $ROW in
 B0) ROW_QUERIES=$P5/$SPLIT.query.json ;;
@@ -104,4 +104,5 @@ fi
 [ "$ROW" = B0 ] || EXTRA+=(--baseline-run "$P5/B0.$SPLIT.run")
 # Linear NDCG gain matches trec_eval on graded TREC DL qrels; binary MS MARCO qrels are unaffected.
 $PY -m p5.evaluate --name "$NAME" --queries "$ROW_QUERIES" --index "$INDEX" --qrels "$QRELS" \
-    ${EXTRA[@]+"${EXTRA[@]}"} --gain linear --run-output "$P5/$NAME.$SPLIT.run" --output "$P5/$NAME.$SPLIT.json"
+    ${EXTRA[@]+"${EXTRA[@]}"} --gain linear --check-upstream "${UPSTREAM_CHECKS:-2}" \
+    --run-output "$P5/$NAME.$SPLIT.run" --output "$P5/$NAME.$SPLIT.json"

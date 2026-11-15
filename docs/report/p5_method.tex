@@ -9,8 +9,8 @@
 CL-SR scores a passage only through concepts it shares with the query, and a short query activates few of
 them. A relevant passage written with related concepts can therefore score zero, which is the
 vocabulary-mismatch failure that \citet{park2025decoding} measure on the 988 MS MARCO dev queries where BM25
-misses every relevant passage in its top 1000; there CL-SR Max trails SimLM by 23\% MRR@10 (0.143 against
-0.185). We change only the query side: passages, the index, the SAE and the BM25 constants stay as released,
+misses every relevant passage in its top 1000; there CL-SR Efficient, our baseline configuration, trails
+SimLM by a third in MRR@10 (0.124 against 0.185). We change only the query side: passages, the index, the SAE and the BM25 constants stay as released,
 and the original query concepts keep their weights.
 
 \paragraph{Candidate pool.}
@@ -62,7 +62,9 @@ Because near-miss concepts make part of the expander a per-query threshold, we c
 tuned on validation, and against a rule-based \emph{decoder-neighbour} row (N) that adds the top-$B$
 neighbours with weight equal to the source concept's weight times their cosine. Significance comes from a
 paired randomisation test (10{,}000 sign flips) on the full query set and on the BM25-mismatch subsets, which
-we rebuild with Pyserini BM25 so that validation queries have them too. Our claims rest on six tests, L
+we rebuild with Pyserini BM25 ($k_1=0.9$, $b=0.4$, prebuilt MS MARCO index) so that validation queries have
+them too; on dev this gives 988 queries at top 1000, the paper's count, and 684 of the 5{,}000 validation
+queries. Our claims rest on six tests, L
 against B0, T and N on Recall@1000 and on mismatch MRR@10, which we correct together with Holm's method at
 $\alpha=0.05$; other p-values in the table are uncorrected. Every query counts in the denominator, including those for which CL-SR returns nothing; the
 released evaluation script skips them, which would favour expansion.

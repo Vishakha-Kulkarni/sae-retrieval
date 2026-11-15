@@ -16,8 +16,8 @@ Anyone running upstream `main()` directly gets empty runs.
 ## Problem
 CL-SR scores a passage only through concepts it shares with the query. Short queries activate few concepts,
 so a relevant passage expressed through related concepts can score zero. Vocabulary-mismatch queries show it:
-on the 988 dev queries where BM25 fails at top 1000, CL-SR Max reaches MRR@10 0.143 against SimLM's 0.185
-(paper Table 5).
+on the 988 dev queries where BM25 fails at top 1000, CL-SR Efficient (our B0 configuration) reaches MRR@10
+0.124 against SimLM's 0.185 (paper Table 5).
 
 ## Method
 - **Pool (per query):** the 32 strongest *near-miss* concepts (positive SAE pre-activation at or below the
@@ -45,6 +45,36 @@ index, top 1000). Tuning uses the 5,000-query validation split only. Dev and TRE
 | T | Threshold × s, s ∈ {0.9, …, 0.5} tuned on validation | B0 | Control: is the gain just a lower threshold? |
 | N | B0 + decoder neighbours, weight = source weight × cosine, B tuned | B0 | Rule-based expansion |
 | L | B0 + learned expansion, B tuned | B0; reported next to T and N | P5 method |
+
+**Choosing T and N (fixed 9 Nov, before their results):** the strongest control on P5's claim metric, i.e. the
+scale s and budget B with the highest validation mismatch@1000 MRR@10, ties broken by validation Recall@1000.
+
+**B0 on validation (9 Nov):** MRR@10 0.3336, Recall@1000 0.9605, NDCG@10 0.3936; mismatch@10/100/1000 MRR@10
+0.214 / 0.148 / 0.111 (3,196 / 1,723 / 684 queries); 23.2 concepts per query. P4's Lucene B0 on the same split:
+0.3347 / 0.9629 / 0.3952.
+
+**Validation rows (10 Nov)** (MRR@10 / R@1k / mismatch@1000 MRR@10 / concepts per query; p vs B0 uncorrected):
+L 0.3405 / 0.9607 / 0.1193 (p 0.010) / 39.2; T0.5 0.3397 / 0.9610 / 0.1171 (p 0.22) / 57.0 (best T is the grid
+edge); N4 0.2851 / 0.9431 / 0.0896 / 27.2 (every N row is below B0). Chosen controls: **T0.5, N4**.
+Validation family: L > B0 on mismatch (p_Holm 0.040), not on R@1k (1.0); L vs T0.5 not significant; L > N4.
+
+**Dev (10 Nov, final):** B0 0.3158 / 0.9472 / 0.1038 / 23.9 / 385 ms; L 0.3201 / 0.9488 / 0.1068 / 39.9 / 442 ms;
+T0.5 0.3215 / 0.9522 / 0.1099 / 58.7 / 446 ms; N4 0.2741 / 0.9285 / 0.0893 / 27.9 / 402 ms.
+Dev family (Holm): L vs B0 R@1k 0.24, mismatch 0.40 (**not significant: the P5 target is not met**); L vs T0.5
+R@1k 0.004 **in T's favour**, mismatch 0.40; L > N4 on both (≤ 0.006).
+Postings per query vs B0: L 1.11×, T0.5 1.11×, N4 1.00×. TREC DL NDCG@10 (B0 / L / T0.5 / N4): DL19 0.611 /
+0.611 / 0.611 / 0.522; DL20 0.568 / 0.574 / 0.569 / 0.512; only N differs from B0 (p < 0.01).
+Seeds s1, s2 (dev, DL19, DL20): jobs 26194803–08. L over 3 seeds (mean ± sd): dev MRR@10 0.3198 ± 0.0003,
+R@1k 0.9491 ± 0.0003, mismatch 0.1064 ± 0.0010, NDCG@10 0.3787 ± 0.0004; DL19 NDCG@10 0.6125 ± 0.0035, DL20
+0.5723 ± 0.0028. T0.5 beats every seed on dev R@1k and mismatch. All three
+checkpoints chose B = 16 (best proxy step 1000 / 1400 / 1600 of 2000).
+
+**Diagnostics (`python -m p5.example`, validation, seed-42 L):** added concepts are 81% near-miss only, 13% both,
+6% neighbour only (by weight 82 / 12 / 6%). First relevant rank, all 5,000: up 1,386, down 1,168, same 2,251,
+found 11, lost 11, missed by both 173; mismatch@1000 subset: up 268, down 174, same 125, found 5, lost 4,
+missed 108. All 184 B0 misses share an indexed concept with the original query; 106 contain an added concept.
+Example: 515294 "the definition of protection", rank 5 → 1; top added concepts are question-form near misses,
+one of five in the relevant passage.
 
 **What counts as an improvement (P5 target):** L beats B0 on Recall@1000 and on mismatch@1000 MRR@10,
 significant under a paired randomisation test (sign flips, 10,000 permutations) after Holm's correction.

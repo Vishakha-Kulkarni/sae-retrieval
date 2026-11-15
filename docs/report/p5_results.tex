@@ -1,0 +1,108 @@
+% P5-owned report sections: combined results, ablation discussion, conclusion (draft 9 Nov 2026).
+% Budget: about 0.75 + 0.3 + 0.2 page. \todo{[row, column]} cells come from `python -m p5.table` (ablation.tex)
+% and from the row JSONs; sentences in \todo{} that depend on a result are chosen once the numbers exist.
+
+\section{Combined Results}
+\label{sec:results}
+
+\paragraph{Setup.}
+Every row starts from the same frozen artifacts: SimLM passage and query embeddings (passages encoded with
+their titles), one BatchTopK SAE with $k=32$ trained with the released objective, and one CL-SR index that
+keeps at most 24 concepts per passage (23.61 on average; the paper's CL-SR Efficient reports 22.95). Scoring
+uses the released code's BM25 ($k_1=0.6$, $b=2.0$, $k_2=1.5$, BM25 IDF, length as the number of indexed
+concepts). Our reproduced baseline B0 reaches 0.316 MRR@10 and 0.947 Recall@1000 on
+MS MARCO dev, against 0.343 and 0.954 in the paper; all comparisons are against our B0, not the published
+figure. An independent Lucene implementation of the same index (P4) gives 0.3347 MRR@10 on the validation
+split against our 0.3336; the small gap comes from its integer impacts and from dropping concepts with
+negative IDF, which the released scorer keeps. Each piece was tuned on the 5{,}000
+validation queries only; dev and TREC DL 2019/2020 were run once.
+
+\paragraph{Reading the table.}
+Table~\ref{tab:ablation} lists B0, one row per piece and \todo{the combined row}. A dagger marks a
+difference from B0 with $p<0.05$ (paired randomisation test, 10{,}000 sign flips over all queries, uncorrected).
+Every query counts, including those for which CL-SR returns nothing. The cost columns are on the right: query
+concepts, index size and latency. Latency is single-threaded wall time of a vectorised re-implementation of the
+released retrieval loop that returns identical rankings; the released Python loop takes seconds per query on
+the full index. Postings touched per query, which does not depend on the implementation, is reported in the
+text.
+
+\paragraph{Which pieces help.}
+\todo{Rows in order of [row, MRR@10] gain over B0. For each: the gain, whether it is significant, what it costs
+(Concepts/q, Index GB, ms/q). P2, P3 and P4 change passages and move Index GB; P1 and P5 change only scoring or
+queries and leave the index unchanged.}
+
+\paragraph{Vocabulary-mismatch queries.}
+We rebuild the paper's mismatch sets with Pyserini BM25 ($k_1=0.9$, $b=0.4$) over the prebuilt MS MARCO index:
+a query belongs to the top-$K$ set when BM25 retrieves none of its relevant passages in its top $K$. On dev
+this gives 4{,}289, 2{,}327 and 988 queries at $K=10$, 100 and 1000 (paper: about 4.3k, 2.3k and 988), and
+3{,}196, 1{,}723 and 684 of the 5{,}000 validation queries, which lets us tune on mismatch queries without
+touching dev. On the 988-query set B0 reaches 0.104 MRR@10 against SimLM's 0.185 and the paper's 0.124 for
+CL-SR Efficient (Table~5). Query expansion, the piece designed for this column, closes little of the gap: the
+learned expander reaches 0.107 and a lower query threshold 0.110, neither significant after correction
+(Section~\ref{sec:p5-ablation}). \todo{Other pieces' mismatch numbers.}
+
+\paragraph{Do gains add up?}
+\todo{Combined row against the sum of single-piece gains, or: the combined run was not completed before the
+deadline and the table reports single pieces only.}
+
+\paragraph{Negative results.}
+Learned query expansion does not beat B0 after correction and is no better than lowering the query threshold;
+it is trained only to reorder SimLM's top 100, so it never learns to recover passages outside them.
+Decoder-neighbour expansion lowers every metric, and more neighbours lower it further (validation MRR@10
+0.285, 0.259 and 0.227 for budgets 4, 8 and 16), which suggests that neighbours in decoder space mostly match
+unrelated passages. \todo{One sentence per other row that does not beat B0, with its reason.}
+
+\subsection{Ablation of Query Expansion}
+\label{sec:p5-ablation}
+
+P5's claims rest on six tests, the learned expander L against B0, the query-threshold control T and the
+decoder-neighbour control N, each on Recall@1000 and on mismatch@1000 MRR@10, corrected together with Holm's
+method at $\alpha=0.05$. T's scale and N's budget are the ones with the highest validation mismatch@1000
+MRR@10, so each control is as strong as possible on the claim metric (T at scale 0.5, N at budget 4).
+On dev the learned expander does not pass its own test. Against B0 it moves Recall@1000 from 0.947 to 0.949
+($p_\text{Holm}=0.24$) and mismatch@1000 MRR@10 from 0.104 to 0.107 ($p_\text{Holm}=0.40$). The threshold
+control is at least as good on both and significantly better on Recall@1000 (0.952 against 0.949,
+$p_\text{Holm}=0.004$). L beats the neighbour rule on both metrics ($p_\text{Holm}\le 0.006$), but N is itself
+below B0 on every metric. On validation, where T and N were chosen, L's mismatch gain over B0 was significant
+(0.111 to 0.119, $p_\text{Holm}=0.04$); on dev it is less than half as large. The gain from expansion comes from
+near-miss concepts, and a lower query threshold, which needs no training, captures it at least as well; decoder
+neighbours mostly add noise. The learned expander agrees: on validation 81\% of the concepts it adds are
+near-miss concepts only, 13\% are both near-miss and decoder neighbour, and 6\% are neighbours only (82\%, 12\%
+and 6\% of the added weight), so L acts mostly as a learned per-query threshold. It does not raise recall
+because it reorders passages the query already reaches: of the 184 validation queries whose relevant passage
+B0 misses at 1000, L recovers 11 and loses 11 others. Every one of those 184 relevant passages already shares
+an indexed concept with the original query, and 106 contain a concept L adds; they are missed because they
+score too low, not because they share nothing with the query. L's training signal points the same way: it
+learns to reorder SimLM's top 100, so a relevant passage outside them never affects it.
+L adds 16.0 concepts per query on average (39.9 against 23.9) and touches 1.11 times the postings of B0
+(442 against 385\,ms per query). T adds 34.8 concepts but touches about as many postings (1.11 times, 446\,ms),
+because near-miss concepts are rare and their posting lists short, so L has no cost advantage either. On TREC
+DL neither expansion changes NDCG@10 (2019: 0.611 for B0, L and T; 2020: 0.568, 0.574 and 0.569, all
+$p>0.3$, uncorrected), while N lowers it on both years (0.522 and 0.512, $p<0.01$).
+Across budgets $B\in\{4,8,16\}$ on validation, \todo{recall/latency trade-off}. The tests above use the first training
+seed; over three seeds L reaches $0.320\pm0.000$ MRR@10, $0.949\pm0.000$ Recall@1000 and $0.106\pm0.001$
+mismatch@1000 MRR@10 on dev, and $0.612\pm0.004$ and $0.572\pm0.003$ NDCG@10 on DL 2019 and 2020 (mean
+$\pm$ sd). The seed spread is far smaller than the gap to T, which beats every seed on dev Recall@1000 and
+mismatch MRR@10, so the outcome does not depend on the seed.
+On the validation mismatch subset, L moves the first relevant passage up for 268 queries and down for 174
+(\texttt{p5.example}). The largest gain is ``the definition of protection'', whose relevant dictionary entry
+moves from rank 5 to rank 1. The five strongest added concepts are all near-miss concepts, and the training
+queries that activate them most suggest they encode the form of a question rather than its topic: the word
+``can'', ``what is''/``define'' questions, lists, ``where does \ldots\ come from'' questions, and
+``challenges''/``problems''. Only one of the five occurs in the relevant passage. As in the aggregate figures,
+the additions re-weight passages the query already matches instead of supplying a missing synonym.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We asked whether training a stage of concept-level sparse retrieval to rank, instead of leaving it hand-set,
+narrows the gap to the dense retriever it is built from. \todo{Answer in numbers: best [*, MRR@10] and
+[*, R@1k] against B0 and against SimLM's 0.411 (paper Table~1), and what it costs in index size and latency.}
+\todo{One sentence on which kind of change helps most (scoring, SAE training, sparsity, pruning or query
+expansion).}
+
+\paragraph{Limitations.}
+We study one SAE size ($k=32$) on MS MARCO only, without BEIR transfer. Latency is measured single-threaded
+on shared NSCC nodes. Final trained rows use three seeds. The mismatch sets come from our Pyserini run, which
+matches the paper's dev count at top 1000 exactly but may differ in individual queries. The best threshold scale
+(0.5) and the learned expander's budget (16) are both at the edge of the ranges we searched.
