@@ -1,0 +1,14 @@
+#!/bin/bash
+# One P5 step on the shared week-1 artifacts; ROW/SPLIT/PARAM are documented in scripts/p5.sh.
+# Run order: prepare, train, B0, then the T / N / L sweeps on val; dev and TREC DL only after the freeze.
+# qsub -v ROW=prepare scripts/nscc/p5.pbs
+# qsub -v ROW=N,PARAM=8 scripts/nscc/p5.pbs
+# qsub -v ROW=L,SPLIT=dev,FINAL=1 scripts/nscc/p5.pbs
+#PBS -N p5
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=12:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+bash scripts/p5.sh

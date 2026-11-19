@@ -1,0 +1,39 @@
+#!/bin/bash
+# B0 CL-SR index in the upstream format P5 reads: passage latents from $SAE over $DATA/passages.npy, the upstream
+# inverted index (cl-sr/indexing.py) and the matching corpus stats/database (p1.prepare corpus), both capped at
+# MAX_LATENTS concepts per passage (the team cap; CL-SR Efficient uses 24). Writes the env.sh defaults
+# $INDEX, $STATS and $CORPUS_DB; finished steps are skipped on a rerun.
+# qsub -P $PROJECT_ID -v MAX_LATENTS=24 scripts/nscc/b0_index.pbs
+# The upstream Python-object index is memory intensive, hence the 110 GB node (as in p3_full_eval.pbs).
+#PBS -N b0_index
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=12:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+MAX_LATENTS=${MAX_LATENTS:?set MAX_LATENTS, the per-passage concept cap the team uses (24 for CL-SR Efficient)}
+LATENTS=${LATENTS:-$(dirname "$INDEX")/passages.latents.jsonl}
+mkdir -p "$(dirname "$INDEX")" "$(dirname "$STATS")" "$(dirname "$CORPUS_DB")"
+echo "SAE $SAE sha256 $(sha256sum "$SAE" | cut -d' ' -f1) | cap $MAX_LATENTS" | tee "$(dirname "$INDEX")/provenance.txt"
+
+if [ ! -e "$LATENTS" ]; then
+    python -m p2.evaluate export --checkpoint "$SAE" --embeddings "$DATA/passages.npy" \
+        --output "$LATENTS.partial" --device "${DEVICE:-cuda}"
+    mv "$LATENTS.partial" "$LATENTS"
+fi
+if [ ! -e "$INDEX" ]; then  # written under a temporary name so a killed run never leaves a truncated index
+    python upstream/Decoding-Dense-Embeddings/cl-sr/indexing.py --passage_latents "$LATENTS" \
+        --index_save_path "$INDEX.partial" --max_latents "$MAX_LATENTS"
+    mv "$INDEX.partial" "$INDEX"
+fi
+[ -e "$STATS" ] || python -m p1.prepare corpus --passages "$LATENTS" --database "$CORPUS_DB" --stats "$STATS" \
+    --max-concepts "$MAX_LATENTS"
+
+python - "$STATS" <<'EOF'
+import json, sys
+stats = json.load(open(sys.argv[1]))
+print(f"stats: {stats['num_docs']} passages (expect 8,841,823), {stats['avg_doc_length']:.2f} concepts per passage "
+      f"(cap {stats['max_concepts']}; paper Efficient 22.95), {len(stats['document_frequency'])} concepts in use")
+EOF
+ls -lh "$LATENTS" "$INDEX" "$STATS" "$CORPUS_DB"

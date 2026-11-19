@@ -1,0 +1,67 @@
+#!/bin/bash
+# BM25 top-1000 runs (Pyserini, CPU only) and the vocabulary-mismatch subsets for dev and validation,
+# under both KTD3 BM25 settings. Run scripts/nscc/bm25_setup.sh once on a login node first.
+# qsub -P $PROJECT_ID scripts/nscc/bm25.pbs
+# Writes $RAW/bm25/bm25.{dev,validation}.<tag>.trec and $RAW/bm25/mismatch.<tag>/, then prints the dev
+# counts against the paper's 988 and the ln command that makes the KTD3 choice $MISMATCH.
+#PBS -N bm25
+#PBS -q normal
+#PBS -l select=1:ncpus=16:mem=64gb
+#PBS -l walltime=02:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+BM25_PY=${BM25_PY:-$HOME/pyserini-env/bin/python}
+JAVA_MODULE=${JAVA_MODULE-java/26.0.1-jdk}  # empty: the JDK 21 bm25_setup.sh unpacked into $JDK
+if [ -n "$JAVA_MODULE" ]; then
+    module load "$JAVA_MODULE"
+else
+    export JAVA_HOME=${JDK:-$HOME/scratch/sae/jdk-21} PATH=${JDK:-$HOME/scratch/sae/jdk-21}/bin:$PATH
+fi
+export PYSERINI_CACHE=${PYSERINI_CACHE:-$HOME/scratch/sae/pyserini}
+"$BM25_PY" -c 'from pyserini.search.lucene import LuceneSearcher' ||
+    { echo "Pyserini does not import from $BM25_PY: run bash scripts/nscc/bm25_setup.sh until it prints OK" >&2; exit 1; }
+export OUT=$RAW/bm25 DEV_TOPICS=$RAW/queries.dev.small.tsv VALIDATION_TOPICS=$RAW/split/validation.queries.tsv
+TAGS="k0.9_b0.4 k0.82_b0.68"  # default first; KTD3 falls back to the tuned setting
+
+for tag in $TAGS; do
+    K1=${tag%_b*}; K1=${K1#k}; B=${tag#*_b}
+    [ -e "$OUT/bm25.validation.$tag.trec" ] ||
+        PY=$BM25_PY K1=$K1 B=$B THREADS=16 bash scripts/bm25.sh
+    for split in dev validation; do
+        topics=$([ $split = dev ] && echo "$DEV_TOPICS" || echo "$VALIDATION_TOPICS")
+        qrels=$([ $split = dev ] && echo "$DEV_QRELS" || echo "$VAL_QRELS")
+        # p5.mismatch counts a query missing from the run as a BM25 failure, so every topic must be there.
+        python - "$topics" "$OUT/bm25.$split.$tag.trec" <<'EOF'
+import sys
+from collections import Counter
+topics = {line.split('\t')[0] for line in open(sys.argv[1])}
+hits = Counter(line.split()[0] for line in open(sys.argv[2]))
+missing = topics - set(hits)
+print(f'{sys.argv[2]}: {len(hits)} of {len(topics)} queries, {min(hits.values())}-{max(hits.values())} hits each')
+if missing or set(hits) - topics:
+    sys.exit(f'run and topics disagree: {len(missing)} topics missing, {len(set(hits) - topics)} extra qids')
+EOF
+        [ -e "$OUT/mismatch.$tag/$split.mismatch.json" ] ||
+            python -m p5.mismatch --run "$OUT/bm25.$split.$tag.trec" --qrels "$qrels" \
+                --output-dir "$OUT/mismatch.$tag" --name "$split" > /dev/null
+    done
+done
+
+python - "$OUT" $TAGS <<'EOF'
+import json, sys
+out, tags = sys.argv[1], sys.argv[2:]
+chosen = None
+for tag in tags:
+    dev = json.load(open(f'{out}/mismatch.{tag}/dev.mismatch.json'))
+    val = json.load(open(f'{out}/mismatch.{tag}/validation.mismatch.json'))
+    ok = 900 <= dev['counts']['1000'] <= 1100
+    chosen = chosen or (tag if ok else None)
+    print(f'{tag}: dev {dev["counts"]} of {dev["labeled_queries"]} (paper {dev["paper_dev_counts"]}) '
+          f'{"in" if ok else "OUTSIDE"} 900-1,100 | validation {val["counts"]} of {val["labeled_queries"]}')
+if chosen:
+    print(f'KTD3 choice: {chosen}. Link it and record the setting in docs/P5_method_note.md:')
+    print(f'  ln -sfn mismatch.{chosen} {out}/mismatch')
+else:
+    print('STOP (plan Goal Capsule): dev mismatch@1000 is outside 900-1,100 under both settings; report our count')
+EOF

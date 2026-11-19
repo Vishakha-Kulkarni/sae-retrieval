@@ -1,0 +1,59 @@
+#!/bin/bash
+# Shared week-1 artifacts every piece tunes on (P5 owns the split; docs/shared_artifacts.md lists the files).
+# Validation first, so P1 and P3 are unblocked before the slow train-query candidates finish.
+# Steps whose output exists are skipped, so the job can be resubmitted after a timeout.
+# qsub -P $PROJECT_ID scripts/nscc/shared.pbs
+#PBS -N shared_artifacts
+#PBS -q normal
+#PBS -l select=1:ncpus=16:ngpus=1:mem=110gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+source "$PBS_O_WORKDIR/scripts/nscc/env.sh"
+set -euo pipefail
+mkdir -p "$DATA"
+SPLIT=$RAW/split
+
+step() {  # output, command...: run the command only if the output is missing
+    local out=$1; shift
+    if [ -e "$out" ]; then echo "skip $out"; else echo "make $out"; "$@"; fi
+}
+
+# 1. Training-derived validation split: 5,000 labelled train queries, seed 42 (deterministic).
+step "$SPLIT" python -m p1.prepare split --queries "$RAW/queries.train.tsv" --qrels "$RAW/qrels.train.tsv" \
+    --output-dir "$SPLIT" --size 5000 --seed 42
+cmp -s "$SPLIT/validation.qids" splits/validation.qids || {
+    echo "$SPLIT/validation.qids differs from the frozen splits/validation.qids; check the inputs against" \
+         "splits/SHA256SUMS" >&2; exit 1; }
+
+# 2. Validation: query embeddings and dense top-100 candidates with SimLM teacher scores.
+step "$DATA/passages.npy" python -m p2.encode passages --input "$RAW/collection.tsv" --output "$DATA/passages.npy" \
+    --batch-size 1024
+step "$DATA/val_queries.npy" python -m p2.encode queries --input "$SPLIT/validation.queries.tsv" \
+    --output "$DATA/val_queries.npy"
+step "$DATA/val.cands.npy" python -m p2.candidates --passages "$DATA/passages.npy" --queries "$DATA/val_queries.npy" \
+    --qrels "$SPLIT/validation.qrels" --output-prefix "$DATA/val"
+# P3 reads the split as "validation" (p2.evaluate.load_split); P2 and P5 write and read "val".
+for name in val_queries.npy val_queries.ids val.cands.npy val.teacher.npy val.pos.npy val.run; do
+    ln -sfn "$name" "$DATA/${name/val/validation}"
+done
+
+# 3. Dev queries (final evaluation only; nobody tunes on them). queries.tar.gz has no dev.small file, so it
+# is queries.dev.tsv restricted to the 6,980 queries of qrels.dev.small.tsv.
+if [ ! -e "$RAW/queries.dev.small.tsv" ]; then
+    awk -F'\t' 'NR==FNR{keep[$1]=1; next} ($1 in keep)' "$RAW/qrels.dev.small.tsv" "$RAW/queries.dev.tsv" \
+        > "$RAW/queries.dev.small.tsv"
+fi
+step "$DATA/dev_queries.npy" python -m p2.encode queries --input "$RAW/queries.dev.small.tsv" \
+    --output "$DATA/dev_queries.npy"
+
+# 4. Train queries and their candidates: the distillation teacher for P1, P2 and P5. Slowest step.
+step "$DATA/train_queries.npy" python -m p2.encode queries --input "$SPLIT/train.queries.tsv" \
+    --output "$DATA/train_queries.npy"
+step "$DATA/train.cands.npy" python -m p2.candidates --passages "$DATA/passages.npy" \
+    --queries "$DATA/train_queries.npy" --qrels "$SPLIT/train.qrels" --output-prefix "$DATA/train"
+
+# 5. Checksums: every piece verifies with  sha256sum -c $DATA/MANIFEST.sha256  before a run.
+(cd "$RAW" && sha256sum split/*) > "$DATA/MANIFEST.split.sha256"
+(cd "$DATA" && sha256sum passages.npy ./*_queries.npy ./*_queries.ids ./*.cands.npy ./*.teacher.npy ./*.pos.npy ./*.run) \
+    > "$DATA/MANIFEST.sha256"
+echo "done; manifests in $DATA"
