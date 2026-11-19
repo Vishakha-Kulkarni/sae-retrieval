@@ -1,0 +1,22 @@
+{
+ "queries": 200,
+ "empty_queries": 0,
+ "concepts_dropped_idf_le_0": 0,
+ "idf": "repo",
+ "k": 1000,
+ "index_gb": 0.563,
+ "index_load_s": 0.72,
+ "latency_ms": {
+  "mean": 45.38,
+  "median": 43.45,
+  "p95": 70.33,
+  "total_s": 9.08
+ },
+ "queries_per_s": 22.0,
+ "metrics": {
+  "NDCG@10": 0.59636,
+  "MRR@10": 0.90988,
+  "Recall@1000": 0.71518,
+  "evaluated_queries": 43
+ }
+}
